@@ -126,6 +126,22 @@ def init_db():
     except Exception as e:
         print(f"Erro ao verificar/migrar colunas de reembolso: {e}")
     
+    # Tabela de financeiros (usuários com permissão para aprovar saques/reembolsos)
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS financeiros (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE NOT NULL,
+                role TEXT DEFAULT 'financeiro',
+                permissions TEXT DEFAULT 'approve_withdrawals,approve_refunds',
+                added_by INTEGER,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(user_id)
+            )
+        """)
+    except Exception as e:
+        print(f"Erro ao criar tabela financeiros: {e}")
+    
     conn.commit()
     conn.close()
 
@@ -798,3 +814,89 @@ def get_transaction_lock_status() -> dict:
         "locked": _transaction_lock.locked(),
         "timestamp": datetime.now().isoformat()
     }
+
+# ============ FUNÇÕES DE FINANCEIROS ============
+
+def add_financeiro(user_id: int, added_by: int) -> bool:
+    """Adiciona um usuário como financeiro (pode aprovar saques/reembolsos)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO financeiros (user_id, added_by, added_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        """, (user_id, added_by))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Erro ao adicionar financeiro: {e}")
+        return False
+    finally:
+        conn.close()
+
+def remove_financeiro(user_id: int) -> bool:
+    """Remove um usuário da lista de financeiros."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM financeiros WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Erro ao remover financeiro: {e}")
+        return False
+    finally:
+        conn.close()
+
+def is_financeiro(user_id: int) -> bool:
+    """Verifica se um usuário é financeiro."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM financeiros WHERE user_id = ?", (user_id,))
+        result = cursor.fetchone()
+        return result is not None
+    except Exception as e:
+        print(f"Erro ao verificar se é financeiro: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_all_financeiros() -> list:
+    """Retorna lista de todos os financeiros."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT user_id FROM financeiros ORDER BY added_at DESC")
+        result = cursor.fetchall()
+        return [row[0] for row in result]
+    except Exception as e:
+        print(f"Erro ao buscar financeiros: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_financeiro_info(user_id: int) -> dict:
+    """Retorna informações sobre um financeiro."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT user_id, role, permissions, added_by, added_at
+            FROM financeiros WHERE user_id = ?
+        """, (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return {
+                "user_id": result[0],
+                "role": result[1],
+                "permissions": result[2],
+                "added_by": result[3],
+                "added_at": result[4]
+            }
+        return None
+    except Exception as e:
+        print(f"Erro ao buscar info do financeiro: {e}")
+        return None
+    finally:
+        conn.close()
