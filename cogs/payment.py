@@ -37,13 +37,6 @@ EMOJI_VENDEDOR = os.getenv("EMOJI_VENDEDOR", "👤")
 EMOJI_VALOR = os.getenv("EMOJI_VALOR", "💰")
 EMOJI_PAGAMENTO = os.getenv("EMOJI_PAGAMENTO", "💳")
 
-# Emojis para notificações
-EMOJI_SUCESSO = os.getenv("EMOJI_SUCESSO", "✅")
-EMOJI_CLIENTE = os.getenv("EMOJI_CLIENTE", "👥")
-EMOJI_VENDEDOR = os.getenv("EMOJI_VENDEDOR", "👤")
-EMOJI_VALOR = os.getenv("EMOJI_VALOR", "💰")
-EMOJI_PAGAMENTO = os.getenv("EMOJI_PAGAMENTO", "💳")
-
 class PagamentoViewClienteOnly(discord.ui.View):
     """View com botão de pagamento que só o cliente pode clicar."""
     
