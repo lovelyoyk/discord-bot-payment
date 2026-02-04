@@ -1,0 +1,26 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Hostinger
+      uses: appleboy/ssh-action@master
+      with:
+        host: srv1330503.hstgr.cloud
+        username: root
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /opt/discord-bot
+          git pull origin main
+          pkill -f "python main.py" || true
+          sleep 2
+          nohup python main.py > logs/bot.log 2>&1 &
+          echo "✅ Bot deploído e reiniciado!"
