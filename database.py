@@ -274,15 +274,15 @@ def get_transaction_history(user_id: int, limit: int = 10) -> list:
     conn.close()
     return results
 
-def register_payment(payment_id: str, receiver_id: int, amount: float, channel_id: int = None) -> bool:
-    """Registra um pagamento com o canal onde foi gerado."""
+def register_payment(payment_id: str, receiver_id: int, amount: float, channel_id: int = None, internal_id: str = None) -> bool:
+    """Registra um pagamento com o canal onde foi gerado e o ID interno da MisticPay."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO payments (payment_id, receiver_id, amount, channel_id, status)
-            VALUES (?, ?, ?, ?, 'pending')
-        """, (payment_id, receiver_id, amount, channel_id))
+            INSERT INTO payments (payment_id, receiver_id, amount, channel_id, internal_id, status)
+            VALUES (?, ?, ?, ?, ?, 'pending')
+        """, (payment_id, receiver_id, amount, channel_id, internal_id))
         conn.commit()
         return True
     except Exception as e:
@@ -301,11 +301,21 @@ def get_payment_channel(payment_id: str) -> int:
     return result[0] if result else None
 
 def get_payment_receiver(payment_id: str) -> int:
-    """Retorna o receiver_id (vendedor) de um pagamento."""
+    """Retorna o receiver_id (vendedor) de um pagamento.
+    Procura tanto pelo payment_id customizado quanto pelo internal_id da MisticPay.
+    """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Primeiro tenta pelo payment_id customizado (discord_...)
     cursor.execute("SELECT receiver_id FROM payments WHERE payment_id = ?", (payment_id,))
     result = cursor.fetchone()
+    
+    # Se não encontrar, tenta pelo internal_id (ID numérico da MisticPay)
+    if not result:
+        cursor.execute("SELECT receiver_id FROM payments WHERE internal_id = ?", (payment_id,))
+        result = cursor.fetchone()
+    
     conn.close()
     return result[0] if result else None
 

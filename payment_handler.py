@@ -57,13 +57,18 @@ class MisticPayHandler:
                 data = response.json()
                 transaction_data = data.get("data", {})
                 
-                payment_id = transaction_data.get("transactionId")
+                # MisticPay retorna tanto o transactionId customizado quanto o ID interno
+                payment_id = transaction_data.get("transactionId")  # ID customizado (discord_...)
+                internal_id = transaction_data.get("id")  # ID interno da MisticPay (505520)
                 qr_code_base64 = transaction_data.get("qrCodeBase64")
                 qr_code_url = transaction_data.get("qrcodeUrl")
                 copy_paste = transaction_data.get("copyPaste")
                 
+                print(f"[MisticPay] ✅ Pagamento criado - ID customizado: {payment_id} | ID interno: {internal_id}")
+                
                 return {
                     "payment_id": payment_id,
+                    "internal_id": internal_id,  # Adicionar ID interno
                     "url": copy_paste,  # Código PIX copia e cola
                     "qr_code_url": qr_code_url,
                     "qr_code_base64": qr_code_base64,

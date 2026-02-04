@@ -466,12 +466,13 @@ class PaymentCog(commands.Cog):
             
             padronizar_embed(embed, interaction, user=cliente, icone_tipo="payment")
             
-            # Registrar pagamento no banco com canal
+            # Registrar pagamento no banco com canal e ID interno da MisticPay
             register_payment(
                 payment_id=result['payment_id'],
                 receiver_id=interaction.user.id,  # CORREÇÃO: receiver é o vendedor, não o cliente
                 amount=total,
-                channel_id=interaction.channel.id
+                channel_id=interaction.channel.id,
+                internal_id=result.get('internal_id')  # ID interno da MisticPay (ex: 505520)
             )
             
             await loading_msg.delete()
