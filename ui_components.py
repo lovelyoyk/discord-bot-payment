@@ -755,7 +755,7 @@ class AprovacaoSaqueView(discord.ui.View):
 
 
 class ReebolsarPagamentoView(discord.ui.View):
-    """View com botão de rembolso automático para pagamentos"""
+    """View com botão de rembolso que abre modal para inserir chave PIX"""
     def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_fixa: float = 1.00, timeout: int = 3600):
         super().__init__(timeout=timeout)
         self.payment_id = payment_id
@@ -765,7 +765,7 @@ class ReebolsarPagamentoView(discord.ui.View):
     
     @discord.ui.button(label="Rembolsar", style=discord.ButtonStyle.danger, emoji="💸")
     async def rembolsar(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Botão para rembolsar o pagamento com taxa automática"""
+        """Botão para rembolsar - abre modal para inserir chave PIX"""
         # Verificar se tem permissão (cargo /cobrar)
         from database import has_cargo_permission
         
@@ -776,24 +776,61 @@ class ReebolsarPagamentoView(discord.ui.View):
             await interaction.response.send_message("❌ Você não tem permissão para rembolsar. Use `/add-permissao` para obter acesso.", ephemeral=True)
             return
         
+        # Calcular valores para mostrar no modal
+        valor_bruto = float(self.amount)
+        taxa_rembolso = self.taxa_fixa
+        valor_liquido = valor_bruto - taxa_rembolso
+        taxa_saque = 5.00
+        valor_apos_saque = valor_liquido - taxa_saque
+        
+        # Criar e exibir modal
+        modal = ModalChavePIX(
+            payment_id=self.payment_id,
+            amount=valor_bruto,
+            vendedor_id=self.vendedor_id,
+            taxa_rembolso=taxa_rembolso,
+            valor_liquido=valor_liquido,
+            taxa_saque=taxa_saque,
+            valor_apos_saque=valor_apos_saque
+        )
+        
+        await interaction.response.send_modal(modal)
+
+
+class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
+    """Modal para inserir a chave PIX do cliente"""
+    
+    def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_rembolso: float, valor_liquido: float, taxa_saque: float, valor_apos_saque: float):
+        super().__init__()
+        self.payment_id = payment_id
+        self.amount = amount
+        self.vendedor_id = vendedor_id
+        self.taxa_rembolso = taxa_rembolso
+        self.valor_liquido = valor_liquido
+        self.taxa_saque = taxa_saque
+        self.valor_apos_saque = valor_apos_saque
+        
+        self.chave_pix_input = discord.ui.TextInput(
+            label="Chave PIX do Cliente",
+            placeholder="Ex: email@exemplo.com ou CPF ou telefone",
+            required=True,
+            min_length=3,
+            max_length=100
+        )
+        self.add_item(self.chave_pix_input)
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        """Processa o envio do formulário"""
         try:
-            # Calcular valor com taxa fixa de rembolso
-            valor_bruto = float(self.amount)
-            taxa_rembolso = self.taxa_fixa  # Taxa fixa de R$ 1,00
-            valor_liquido = valor_bruto - taxa_rembolso
-            
-            # Taxa de saque (R$ 5,00) é descontada quando o usuário sacar
-            taxa_saque = 5.00
-            valor_apos_saque = valor_liquido - taxa_saque
-            
-            # Criar reembolso automático
-            from database import create_refund
+            chave_pix = self.chave_pix_input.value.strip()
             
             # Criar reembolso
+            from database import create_refund
+            
             success = create_refund(
                 user_id=self.vendedor_id,
-                amount=valor_liquido,
-                reason=f"Rembolso automático do pagamento {self.payment_id}",
+                amount=self.valor_liquido,
+                reason=f"Rembolso de PIX: {chave_pix} (Pagamento: {self.payment_id})",
                 payment_id=self.payment_id,
                 misticpay_ref=None
             )
@@ -802,23 +839,23 @@ class ReebolsarPagamentoView(discord.ui.View):
                 await interaction.response.send_message("❌ Erro ao criar reembolso no banco de dados.", ephemeral=True)
                 return
             
-            # Notificar usuário
-            embed = discord.Embed(
-                title="✅ Rembolso Processado",
-                description=f"Seu rembolso foi criado automaticamente!",
+            # Notificar vendedor
+            embed_vendedor = discord.Embed(
+                title="✅ Rembolso Criado",
+                description="Seu reembolso foi registrado e aguarda aprovação!",
                 color=discord.Color.green()
             )
-            embed.add_field(name="💰 Valor Bruto", value=f"R$ {valor_bruto:.2f}", inline=True)
-            embed.add_field(name="📊 Taxa Rembolso", value=f"-R$ {taxa_rembolso:.2f}", inline=True)
-            embed.add_field(name="💵 Saldo Reembolso", value=f"R$ {valor_liquido:.2f}", inline=True)
-            embed.add_field(name="💳 Taxa Saque", value=f"-R$ {taxa_saque:.2f}", inline=True)
-            embed.add_field(name="🏦 Você Receberá", value=f"**R$ {valor_apos_saque:.2f}**", inline=True)
-            embed.set_footer(text=f"Pagamento: {self.payment_id}")
+            embed_vendedor.add_field(name="💰 Valor Bruto", value=f"R$ {self.amount:.2f}", inline=True)
+            embed_vendedor.add_field(name="📊 Taxa Rembolso", value=f"-R$ {self.taxa_rembolso:.2f}", inline=True)
+            embed_vendedor.add_field(name="💵 Saldo Reembolso", value=f"R$ {self.valor_liquido:.2f}", inline=True)
+            embed_vendedor.add_field(name="💳 Taxa Saque", value=f"-R$ {self.taxa_saque:.2f}", inline=True)
+            embed_vendedor.add_field(name="🏦 Você Receberá", value=f"**R$ {self.valor_apos_saque:.2f}**", inline=True)
+            embed_vendedor.add_field(name="🔑 Chave PIX", value=f"`{chave_pix}`", inline=False)
+            embed_vendedor.set_footer(text=f"Pagamento: {self.payment_id}")
             
-            vendedor_user = await interaction.client.fetch_user(self.vendedor_id)
-            await vendedor_user.send(embed=embed)
+            await interaction.response.send_message(embed=embed_vendedor, ephemeral=True)
             
-            await interaction.response.send_message("✅ Rembolso processado com sucesso!", ephemeral=True)
         except Exception as e:
-            print(f"Erro ao processar rembolso: {e}")
-            await interaction.response.send_message(f"❌ Erro ao processar rembolso: {str(e)}", ephemeral=True)
+            print(f"Erro ao processar rembolso via modal: {e}")
+            await interaction.response.send_message(f"❌ Erro ao processar: {str(e)}", ephemeral=True)
+
