@@ -854,7 +854,7 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
             embed_vendedor.add_field(name="🔑 Chave PIX", value=f"`{chave_pix}`", inline=False)
             embed_vendedor.set_footer(text=f"ID: #{refund_id}")
             
-            await interaction.response.send_message(embed=embed_vendedor, ephemeral=True)
+            await interaction.response.send_message(embed=embed_vendedor)
             
             # Buscar aprovadores
             aprovadores = os.getenv("APROVADORES_REEMBOLSO", "").split(",")
