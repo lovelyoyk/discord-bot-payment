@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reembolsos - LS Aluguel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: #000000;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+        }
+        .sidebar {
+            background: #1a1a1a;
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: #cbd5e0;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: #333333;
+            color: white;
+        }
+        .brand {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(255,255,255,0.1);
+            background: #1a1a1a;
+        }
+        .card-header {
+            background: #1a1a1a !important;
+            color: white;
+            border-bottom: 1px solid #333;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+            border: 1px solid #333;
+        }
+        .stat-card.success { background: linear-gradient(135deg, #0a5f4e 0%, #1a8c6a 100%); }
+        .stat-card.warning { background: linear-gradient(135deg, #8a2435 0%, #c93648 100%); }
+        .stat-card.info { background: linear-gradient(135deg, #1a4f7e 0%, #2878b8 100%); }
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #cbd5e0;
+            margin-top: 5px;
+        }
+        .table {
+            color: #e0e0e0;
+        }
+        .table thead th {
+            background: #2a2a2a;
+            color: white;
+            border-color: #333;
+        }
+        .table td {
+            border-color: #333;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #2a2a2a;
+        }
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .filters .form-select {
+            background: #0f0f0f;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <div class="brand">
+                    <i class="bi bi-cash-coin"></i> LS Aluguel
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    <a class="nav-link active" href="/reembolsos"><i class="bi bi-arrow-return-left"></i> Reembolsos</a>
+                    <a class="nav-link" href="/#pagamentos"><i class="bi bi-credit-card"></i> Pagamentos</a>
+                    <a class="nav-link" href="/#usuarios"><i class="bi bi-people"></i> Usuários</a>
+                    <a class="nav-link" href="/#stats"><i class="bi bi-bar-chart"></i> Estatísticas</a>
+                </nav>
+            </div>
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="text-white"><i class="bi bi-arrow-counterclockwise"></i> Reembolsos</h1>
+                    <div class="text-white">
+                        <i class="bi bi-clock"></i> <span id="currentTime"></span>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card info">
+                            <div class="card-body">
+                                <div class="stat-number">{{ total_reembolsos }}</div>
+                                <div class="stat-label">Total de Reembolsos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="stat-number">{{ reembolsos_pendentes }}</div>
+                                <div class="stat-label">Pendentes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card success">
+                            <div class="card-body">
+                                <div class="stat-number">{{ reembolsos_aprovados }}</div>
+                                <div class="stat-label">Aprovados</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card warning">
+                            <div class="card-body">
+                                <div class="stat-number">{{ reembolsos_rejeitados }}</div>
+                                <div class="stat-label">Rejeitados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="stat-number">R$ {{ "%.2f"|format(valor_total) }}</div>
+                                <div class="stat-label">Valor Total em Reembolsos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card stat-card success">
+                            <div class="card-body">
+                                <div class="stat-number">R$ {{ "%.2f"|format(valor_aprovado) }}</div>
+                                <div class="stat-label">Valor Aprovado</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4 filters">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" action="/reembolsos" class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label">Status</label>
+                                <select name="status" class="form-select" onchange="this.form.submit()">
+                                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todos</option>
+                                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pendentes</option>
+                                    <option value="pendente" {% if status_filter == 'pendente' %}selected{% endif %}>Pendentes</option>
+                                    <option value="aprovado" {% if status_filter == 'aprovado' %}selected{% endif %}>Aprovados</option>
+                                    <option value="rejeitado" {% if status_filter == 'rejeitado' %}selected{% endif %}>Rejeitados</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-arrow-return-left"></i> Reembolsos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-hash"></i> ID</th>
+                                        <th><i class="bi bi-person"></i> Usuário</th>
+                                        <th><i class="bi bi-cash"></i> Valor</th>
+                                        <th><i class="bi bi-file-text"></i> Motivo</th>
+                                        <th><i class="bi bi-tag"></i> Status</th>
+                                        <th><i class="bi bi-calendar"></i> Data</th>
+                                        <th><i class="bi bi-tools"></i> Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if reembolsos %}
+                                        {% for reembolso in reembolsos %}
+                                            <tr>
+                                                <td><strong>#{{ reembolso.id }}</strong></td>
+                                                <td><code>{{ reembolso.user_id }}</code></td>
+                                                <td><strong class="text-success">R$ {{ "%.2f"|format(reembolso.amount) }}</strong></td>
+                                                <td><small>{{ reembolso.reason[:50] }}{% if reembolso.reason|length > 50 %}...{% endif %}</small></td>
+                                                <td>
+                                                    {% if reembolso.status in ['pending', 'pendente'] %}
+                                                        <span class="badge badge-status bg-warning">Pendente</span>
+                                                    {% elif reembolso.status == 'aprovado' %}
+                                                        <span class="badge badge-status bg-success">Aprovado</span>
+                                                    {% elif reembolso.status == 'rejeitado' %}
+                                                        <span class="badge badge-status bg-danger">Rejeitado</span>
+                                                    {% else %}
+                                                        <span class="badge badge-status bg-secondary">{{ reembolso.status }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td><small class="text-muted">{{ reembolso.created_at[:10] }}</small></td>
+                                                <td>
+                                                    {% if reembolso.status in ['pending', 'pendente'] %}
+                                                        <button class="btn btn-success btn-sm js-approve" data-id="{{ reembolso.id }}">
+                                                            <i class="bi bi-check"></i> Aprovar
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm js-reject" data-id="{{ reembolso.id }}">
+                                                            <i class="bi bi-x"></i> Rejeitar
+                                                        </button>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">Nenhum reembolso encontrado</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('pt-BR');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        function approveRefund(refundId) {
+            if (confirm(`Tem certeza que deseja aprovar o reembolso #${refundId}?`)) {
+                alert(`Reembolso #${refundId} aprovado! (Implementação pendente)`);
+            }
+        }
+
+        function rejectRefund(refundId) {
+            if (confirm(`Tem certeza que deseja rejeitar o reembolso #${refundId}?`)) {
+                alert(`Reembolso #${refundId} rejeitado! (Implementação pendente)`);
+            }
+        }
+
+        document.querySelectorAll('.js-approve').forEach(btn => {
+            btn.addEventListener('click', () => approveRefund(btn.dataset.id));
+        });
+        document.querySelectorAll('.js-reject').forEach(btn => {
+            btn.addEventListener('click', () => rejectRefund(btn.dataset.id));
+        });
+    </script>
+</body>
+</html>

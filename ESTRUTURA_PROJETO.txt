@@ -1,0 +1,373 @@
+📁 ESTRUTURA COMPLETA DO PROJETO - v2.1
+
+discord-bot-payment/
+│
+├── 🤖 ARQUIVOS PRINCIPAIS
+│   ├── main.py                          (Bot principal)
+│   ├── database.py                      (SQLite + funções)
+│   ├── payment_handler.py               (Integração MisticPay)
+│   ├── webhook_server.py                (Flask webhook server)
+│   ├── validador_pix.py                 (Validação de PIX)
+│   └── ui_components.py                 (Components Discord UI)
+│
+├── 🎛️ COGS (Módulos)
+│   ├── cogs/
+│   │   ├── payment.py                   (Comandos de pagamento)
+│   │   └── relatorios.py                (Relatórios e dashboard)
+│
+├── ⚙️ CONFIGURAÇÃO
+│   ├── .env.example                     (Template de variáveis)
+│   └── .env                             (Seu arquivo local - NÃO commitar)
+│
+├── 📦 DEPENDÊNCIAS
+│   └── requirements.txt                 (Packages Python)
+│
+├── 📚 DOCUMENTAÇÃO COMPLETA
+│   ├── README.md                        (README original - DESATUALIZADO)
+│   ├── README_NEW.md                    (README v2.1 - ATUALIZADO) ✨ NOVO
+│   ├── NOTIFICACOES_CANAL.md            (Guia de notificações) ✨ NOVO
+│   ├── CHANGELOG_v2.1.md                (Mudanças v2.1) ✨ NOVO
+│   ├── INICIO_RAPIDO_v2.1.md            (Setup 5 min) ✨ NOVO
+│   ├── RESUMO_v2.1.txt                  (Resumo visual) ✨ NOVO
+│   ├── CONFIGURACAO_TAXAS.md            (Guia de taxas)
+│   ├── GUIA_COBRAR.md                   (Tutorial /cobrar)
+│   └── SISTEMA_COMPLETO.md              (Visão geral arquitetura)
+│
+├── 🔧 UTILITÁRIOS & TESTES
+│   ├── migrate_payments_channel.py      (Migração BD) ✨ NOVO
+│   ├── test_notifications.py            (Testes automáticos) ✨ NOVO
+│   ├── simulate_webhook.py              (Simulador webhook) ✨ NOVO
+│   └── bot.db                           (Banco SQLite - criado automaticamente)
+│
+└── 📋 ESTE ARQUIVO
+    └── ESTRUTURA_PROJETO.txt            (Este arquivo) ✨ NOVO
+
+═══════════════════════════════════════════════════════════════
+
+RESUMO DE ARQUIVOS
+
+✨ = Novo em v2.1
+🔄 = Modificado em v2.1
+➖ = Sem mudanças
+
+CÓDIGO PRINCIPAL (6 arquivos)
+├── main.py                      ➖ Sem mudanças
+├── database.py                  🔄 Adicionadas 3 funções
+├── payment_handler.py           🔄 Aceitando channel_id
+├── webhook_server.py            🔄 Notificações em canal
+├── validador_pix.py             ➖ Sem mudanças
+└── ui_components.py             ➖ Sem mudanças
+
+COGS (2 arquivos)
+├── cogs/payment.py              🔄 Captura channel + novo comando
+└── cogs/relatorios.py           ➖ Sem mudanças
+
+CONFIGURAÇÃO (2 arquivos)
+├── .env.example                 🔄 +5 variáveis emoji
+└── .env                         ➖ Seu arquivo local
+
+DOCUMENTAÇÃO (8 arquivos)
+├── README.md                    ➖ Original (desatualizado)
+├── README_NEW.md                ✨ NOVO - Completo
+├── NOTIFICACOES_CANAL.md        ✨ NOVO - Detalhado
+├── CHANGELOG_v2.1.md            ✨ NOVO - Completo
+├── INICIO_RAPIDO_v2.1.md        ✨ NOVO - 5 minutos
+├── RESUMO_v2.1.txt              ✨ NOVO - Visual
+├── CONFIGURACAO_TAXAS.md        ➖ Anterior (compatível)
+├── GUIA_COBRAR.md               ➖ Anterior (compatível)
+└── SISTEMA_COMPLETO.md          ➖ Anterior (compatível)
+
+UTILITÁRIOS (3 arquivos)
+├── migrate_payments_channel.py  ✨ NOVO - Migração BD
+├── test_notifications.py        ✨ NOVO - Validação
+├── simulate_webhook.py          ✨ NOVO - Testes
+└── bot.db                       (criado automaticamente)
+
+═══════════════════════════════════════════════════════════════
+
+LEIA PRIMEIRO (Por Ordem)
+
+1. 🚀 INICIO_RAPIDO_v2.1.md
+   → Setup completo em 5 minutos
+   → Para quem quer logo começar
+
+2. 📖 README_NEW.md
+   → Documentação completa do projeto
+   → Referência de todos os comandos
+
+3. 🔔 NOTIFICACOES_CANAL.md
+   → Guia detalhado de notificações
+   → Como personalizar emojis
+
+4. 📝 CHANGELOG_v2.1.md
+   → O que mudou desde v2.0
+   → Impacto em compatibilidade
+
+5. 📋 RESUMO_v2.1.txt
+   → Visão geral de tudo (este arquivo é melhor)
+   → Checklist de mudanças
+
+═══════════════════════════════════════════════════════════════
+
+EXECUTAR SCRIPTS NA ORDEM
+
+1º) python test_notifications.py
+    → Valida se tudo está configurado
+
+2º) python migrate_payments_channel.py
+    → Se tem banco antigo (MUITO IMPORTANTE!)
+
+3º) python main.py
+    → Terminal 1 - Bot Discord
+
+4º) python webhook_server.py
+    → Terminal 2 - Servidor de webhook (em outro terminal!)
+
+5º) python simulate_webhook.py
+    → OPCIONAL - Para testar sem pagamento real
+
+═══════════════════════════════════════════════════════════════
+
+BANCO DE DADOS (bot.db)
+
+Tabelas:
+├── users
+│   ├── user_id (PRIMARY)
+│   ├── balance
+│   ├── pix_key
+│   └── created_at, updated_at
+│
+├── transactions
+│   ├── id (PRIMARY)
+│   ├── user_id
+│   ├── type (deposit/withdrawal/payment)
+│   ├── amount
+│   ├── description
+│   └── created_at
+│
+├── payments ✨ MODIFICADO
+│   ├── payment_id (PRIMARY)
+│   ├── receiver_id
+│   ├── payer_id
+│   ├── amount
+│   ├── status
+│   ├── qr_code
+│   ├── misticpay_id
+│   ├── channel_id ← NOVO!
+│   └── created_at
+│
+└── withdrawals
+    ├── id (PRIMARY)
+    ├── user_id
+    ├── amount
+    ├── status
+    ├── pix_key
+    └── created_at, processed_at
+
+═══════════════════════════════════════════════════════════════
+
+VARIÁVEIS DE AMBIENTE (.env)
+
+OBRIGATÓRIAS:
+├── DISCORD_BOT_TOKEN        (Token do bot)
+├── MISTICPAY_API_KEY        (API MisticPay)
+├── OWNER_ID                 (Seu ID Discord)
+├── VENDEDOR_ROLE_ID         (ID do cargo vendedor)
+└── WEBHOOK_SECRET           (Secret MisticPay)
+
+TAXAS:
+├── TAXA_RECEBIMENTO         (Padrão: 0.025 = 2.5%)
+└── TAXA_SAQUE               (Padrão: 0.01 = 1%)
+
+EMOJIS (NOVO em v2.1):
+├── EMOJI_SUCESSO            (Padrão: ✅)
+├── EMOJI_CLIENTE            (Padrão: 👥)
+├── EMOJI_VENDEDOR           (Padrão: 👤)
+├── EMOJI_VALOR              (Padrão: 💰)
+└── EMOJI_PAGAMENTO          (Padrão: 💳)
+
+═══════════════════════════════════════════════════════════════
+
+COMANDOS DO BOT
+
+PÚBLICOS:
+├── !saldo                   (Ver seu saldo)
+├── !saldo_geral             (Ver saldo total)
+├── !historico               (Ver transações)
+├── !pix <chave>             (Configurar PIX)
+├── !cobrar @user valor      (Criar cobrança) 🔄 ATUALIZADO
+├── !sacar [valor]           (Sacar saldo)
+└── !dashboard               (Ver métricas)
+
+VENDEDOR:
+├── !adicionar_saldo @user X (Adicionar manualmente)
+├── !remover_saldo @user X   (Remover manualmente)
+├── !listar_usuarios         (Ver todos usuários)
+├── !config_taxas [r] [s]    (Configurar taxas)
+├── !relatorio [período]     (Ver vendas)
+└── !ranking                 (Top 10 vendedores)
+
+OWNER (Novo em v2.1):
+├── !dar_role_vendedor @user (Atribuir cargo)
+└── !config_emojis           (Ver emojis) ✨ NOVO
+
+═══════════════════════════════════════════════════════════════
+
+FLUXO DE PAGAMENTO COMPLETO
+
+         Usuário                     Bot
+            │                        │
+            ├──! cobrar @cliente────►│
+            │                        │
+            │◄───QR + Link + Botão───┤
+            │                        │
+            ├───Escaneia QR/Clica────┤
+            │    ou via DM            │
+            │                        │
+        MisticPay (Externo)          │
+            │                        │
+            ├─────Pagamento PIX──────┤
+            │                        │
+            │                        │ ◄─ Webhook
+            │                        ├─ Busca channel_id
+            │                        ├─ Envia no CANAL
+            │                        ├─ Envia em DM
+            │                        │
+            │◄───Notificação no Canal◤
+            │    + Emojis Custom        │
+            │◄───Confirmação em DM──────┤
+            │                        │
+            └────Consulta !saldo────►│
+                                     │
+                    ✅ Pronto!
+
+═══════════════════════════════════════════════════════════════
+
+ARQUIVOS A NÃO COMMITAR
+
+❌ .env                      (Suas credenciais)
+❌ bot.db                    (Seu banco local)
+❌ bot.db.backup_*          (Backups)
+❌ __pycache__/             (Cache Python)
+❌ *.pyc                    (Compilados Python)
+❌ .env.local               (Variáveis locais)
+
+✅ Adicione ao .gitignore:
+   .env
+   bot.db
+   bot.db.backup*
+   __pycache__/
+   *.pyc
+   .env.local
+
+═══════════════════════════════════════════════════════════════
+
+DICA: Structure do Código
+
+main.py (Entry Point)
+├── Cria bot Discord
+├── Carrega cogs de ./cogs/
+├── Inicia webhook_server em thread
+└── Conecta ao Discord
+
+cogs/payment.py (Comandos)
+├── PaymentCog (classe)
+│   ├── is_vendedor() - Verifica permissões
+│   ├── @commands.command("/cobrar")
+│   ├── @commands.command("/sacar")
+│   ├── @commands.command("/pix")
+│   ├── @commands.command("/saldo")
+│   ├── @commands.command("/config_emojis")
+│   └── ... outros comandos
+└── setup() - Registra cog
+
+webhook_server.py (Webhook)
+├── Flask app
+├── @app.route("/webhook")
+│   ├── Valida assinatura
+│   ├── Processa pagamento
+│   ├── Busca channel_id
+│   └── Envia notificações
+└── notificar_pagamento() - Envia embed
+
+payment_handler.py (MisticPay)
+├── create_payment_link()
+│   ├── Cria link com channel_id
+│   ├── Gera QR code
+│   └── Retorna payment_id
+├── generate_qr_code()
+├── verify_webhook()
+└── create_withdrawal()
+
+database.py (SQLite)
+├── Init banco se não existir
+├── add_user()
+├── add_balance()
+├── get_balance()
+├── register_payment() ✨ NOVO
+├── get_payment_channel() ✨ NOVO
+└── ... outras funções
+
+═══════════════════════════════════════════════════════════════
+
+PRÓXIMAS VERSÕES
+
+v2.2 (Planejado)
+- [ ] Canais separados por tipo de transação
+- [ ] Configuração de canal por servidor
+- [ ] Multi-idioma (PT/EN/ES)
+
+v2.3 (Planejado)
+- [ ] WebSocket para notificações em tempo real
+- [ ] Edição de embed quando pagamento é marcado como "pago"
+- [ ] Reações automáticas (approve/deny)
+
+v2.4 (Planejado)
+- [ ] Sistema de cupons/descontos
+- [ ] Limite de saque diário
+- [ ] Integração Google Sheets
+- [ ] Backup automático em nuvem
+
+v3.0 (Planejado)
+- [ ] Sistema de comissões (%)
+- [ ] Affiliate system
+- [ ] Dashboard web admin
+- [ ] API REST pública
+
+═══════════════════════════════════════════════════════════════
+
+ESTATÍSTICAS
+
+Linhas de Código:
+├── main.py               ~150 linhas
+├── cogs/payment.py       ~600 linhas
+├── cogs/relatorios.py    ~400 linhas
+├── database.py           ~250 linhas
+├── payment_handler.py    ~200 linhas
+├── webhook_server.py     ~150 linhas ✨ (+100 nesta versão)
+├── validador_pix.py      ~150 linhas
+└── TOTAL               ~1.900 linhas
+
+Documentação:
+├── README_NEW.md         ~500 linhas
+├── NOTIFICACOES_CANAL    ~400 linhas
+├── CHANGELOG_v2.1        ~300 linhas
+├── INICIO_RAPIDO         ~200 linhas
+└── TOTAL DOCS          ~1.400 linhas
+
+Arquivos Totais: 22
+├── Python: 8 arquivos
+├── Docs: 8 arquivos
+├── Utils: 3 arquivos
+└── Config: 3 arquivos
+
+═══════════════════════════════════════════════════════════════
+
+VERSÃO: 2.1
+STATUS: ✅ Produção-Ready
+ÚLTIMA ATUALIZAÇÃO: 2025
+TESTADO EM: Windows / Linux / macOS
+
+═══════════════════════════════════════════════════════════════
+
+👉 Comece por: INICIO_RAPIDO_v2.1.md
