@@ -367,14 +367,17 @@ class AdminCog(commands.Cog):
         - Total descontado: R$ 22,00
         
         O reembolso será enviado para aprovadores autorizados no privado.
-        Qualquer pessoa com um cargo pode usar este comando.
+        Apenas usuários com cargo configurado em /add-permissao podem usar.
         """
         
-        # Permite qualquer pessoa que tenha um cargo no servidor
-        if not interaction.user.roles or len(interaction.user.roles) <= 1:  # 1 = @everyone
+        # Verifica se o usuário tem um cargo com permissão de cobrar
+        from database import has_cargo_permission
+        tem_permissao = any(has_cargo_permission(role.id) for role in interaction.user.roles)
+        
+        if not tem_permissao:
             embed = discord.Embed(
                 title="❌ Acesso Negado",
-                description="Você precisa ter um cargo no servidor para usar este comando",
+                description="Você precisa ter um cargo configurado em `/add-permissao` para usar este comando",
                 color=discord.Color.red()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
