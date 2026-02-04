@@ -787,27 +787,20 @@ class ReebolsarPagamentoView(discord.ui.View):
             valor_apos_saque = valor_liquido - taxa_saque
             
             # Criar reembolso automático
-            from database import create_refund, get_balance
-            import uuid
-            
-            refund_id = str(uuid.uuid4())
-            
-            # Verificar se vendedor existe (testando se tem saldo no db)
-            saldo = get_balance(self.vendedor_id)
-            if saldo is None:
-                await interaction.response.send_message("❌ Vendedor não encontrado.", ephemeral=True)
-                return
+            from database import create_refund
             
             # Criar reembolso
-            create_refund(
-                refund_id=refund_id,
+            success = create_refund(
                 user_id=self.vendedor_id,
                 amount=valor_liquido,
-                tax_amount=taxa_rembolso,
                 reason=f"Rembolso automático do pagamento {self.payment_id}",
-                approved=True,
-                approved_by=interaction.user.id
+                payment_id=self.payment_id,
+                misticpay_ref=None
             )
+            
+            if not success:
+                await interaction.response.send_message("❌ Erro ao criar reembolso no banco de dados.", ephemeral=True)
+                return
             
             # Notificar usuário
             embed = discord.Embed(
@@ -820,7 +813,7 @@ class ReebolsarPagamentoView(discord.ui.View):
             embed.add_field(name="💵 Saldo Reembolso", value=f"R$ {valor_liquido:.2f}", inline=True)
             embed.add_field(name="💳 Taxa Saque", value=f"-R$ {taxa_saque:.2f}", inline=True)
             embed.add_field(name="🏦 Você Receberá", value=f"**R$ {valor_apos_saque:.2f}**", inline=True)
-            embed.set_footer(text=f"ID: {refund_id}")
+            embed.set_footer(text=f"Pagamento: {self.payment_id}")
             
             vendedor_user = await interaction.client.fetch_user(self.vendedor_id)
             await vendedor_user.send(embed=embed)
