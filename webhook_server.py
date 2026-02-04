@@ -34,6 +34,15 @@ EMOJI_PAGAMENTO = os.getenv("EMOJI_PAGAMENTO", "💳")
 # Referência global para o bot (será setada pelo main.py)
 bot_instance = None
 
+@app.route("/webhook", methods=["GET"])
+def webhook_test():
+    """Rota de teste para verificar se o webhook está acessível."""
+    return jsonify({
+        "status": "online",
+        "message": "Webhook endpoint está funcionando! Use POST para enviar webhooks.",
+        "timestamp": __import__('datetime').datetime.now().isoformat()
+    }), 200
+
 @app.route("/webhook", methods=["POST"])
 def misticpay_webhook():
     """Webhook para receber notificações de pagamento MisticPay."""
