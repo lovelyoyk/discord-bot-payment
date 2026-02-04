@@ -519,7 +519,7 @@ class PaymentCog(commands.Cog):
         
         # Verificar se é o dono ou vendedor
         is_owner = interaction.user.id == OWNER_ID
-        is_seller = has_cargo_permission(interaction.user.id) if not is_owner else True
+        is_seller = any(has_cargo_permission(role.id) for role in interaction.user.roles) if not is_owner else True
         
         if not is_owner and not is_seller:
             embed = discord.Embed(

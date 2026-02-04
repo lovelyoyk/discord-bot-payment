@@ -787,13 +787,14 @@ class ReebolsarPagamentoView(discord.ui.View):
             valor_apos_saque = valor_liquido - taxa_saque
             
             # Criar reembolso automático
-            from database import create_refund, get_user
+            from database import create_refund, get_balance
             import uuid
             
             refund_id = str(uuid.uuid4())
-            vendedor = get_user(self.vendedor_id)
             
-            if not vendedor:
+            # Verificar se vendedor existe (testando se tem saldo no db)
+            saldo = get_balance(self.vendedor_id)
+            if saldo is None:
                 await interaction.response.send_message("❌ Vendedor não encontrado.", ephemeral=True)
                 return
             
