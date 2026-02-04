@@ -66,13 +66,13 @@ class PagamentoViewClienteOnly(discord.ui.View):
         # Enviar código PIX puro (SEM markdown de link)
         embed = discord.Embed(
             title="💳 Código PIX Copia e Cola",
-            description=f"{self.pix_code}",
+            description="**Copie o código abaixo:**",
             color=discord.Color.green(),
             timestamp=interaction.created_at
         )
         embed.add_field(
             name="📱 Como pagar",
-            value="1️⃣ Copie o código acima\n2️⃣ Abra seu app de banco\n3️⃣ Escolha **PIX Copia e Cola**\n4️⃣ Cole o código e confirme",
+            value="1️⃣ Copie o código (enviado logo abaixo)\n2️⃣ Abra seu app de banco\n3️⃣ Escolha **PIX Copia e Cola**\n4️⃣ Cole o código e confirme",
             inline=False
         )
         embed.add_field(
@@ -88,6 +88,9 @@ class PagamentoViewClienteOnly(discord.ui.View):
         embed.set_footer(text="✅ Pagamento será confirmado automaticamente")
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        # Enviar código PIX separadamente em mensagem de texto puro para facilitar cópia
+        await interaction.followup.send(f"```\n{self.pix_code}\n```", ephemeral=True)
         
         # Enviar QR Code se disponível
         if self.qr_code_base64:
