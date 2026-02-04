@@ -53,10 +53,18 @@ def misticpay_webhook():
         payload = request.get_data().decode('utf-8')
         signature = request.headers.get("X-Signature", "")
         
-        # Log do webhook recebido
+        # Log DETALHADO do webhook recebido
+        event_type = data.get('event', 'unknown') if data else 'unknown'
         if logger:
-            logger.info(f"Webhook recebido: {data.get('event', 'unknown')}")
-        print(f"[Webhook Server] Recebido: {data}")
+            logger.info(f"🔔 [WEBHOOK] Evento recebido: {event_type}")
+        
+        print(f"\n{'='*80}")
+        print(f"[Webhook Server] ⏰ {__import__('datetime').datetime.now().isoformat()}")
+        print(f"[Webhook Server] 📨 Payload completo:")
+        print(f"{data}")
+        print(f"[Webhook Server] 🔍 Event type: {event_type}")
+        print(f"[Webhook Server] 📋 Data field: {data.get('data', {}) if data else 'Nenhum'}")
+        print(f"{'='*80}\n")
         
         # Validar webhook com sistema de segurança (DESABILITADO TEMPORARIAMENTE)
         # if not webhook_validator.validate_webhook(payload, signature, data):
