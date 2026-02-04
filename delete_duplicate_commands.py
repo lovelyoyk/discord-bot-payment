@@ -5,14 +5,26 @@ Usa requests em vez de discord.py para mais controle
 """
 import requests
 import os
-from dotenv import load_dotenv
+import subprocess
+import json
 from collections import Counter
 
-load_dotenv()
+# Carregar .env sem dependências
+def load_env():
+    env = {}
+    env_file = "/opt/discord-bot/.env"
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                if "=" in line and not line.startswith("#"):
+                    key, value = line.strip().split("=", 1)
+                    env[key] = value.strip('"\'')
+    return env
 
-TOKEN = os.getenv("BOT_TOKEN")
-GUILD_ID = os.getenv("GUILD_ID")
-BOT_ID = os.getenv("BOT_ID", "1468341807350808576")  # ID do bot
+env = load_env()
+TOKEN = env.get("BOT_TOKEN")
+GUILD_ID = env.get("GUILD_ID")
+BOT_ID = env.get("BOT_ID", "1468341807350808576")  # ID do bot
 
 if not TOKEN or not GUILD_ID:
     print("❌ BOT_TOKEN ou GUILD_ID não definido!")
