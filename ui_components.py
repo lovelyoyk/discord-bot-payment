@@ -819,7 +819,8 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
             chave_pix = self.chave_pix_input.value.strip()
             
             # Criar reembolso
-            from database import create_refund
+            from database import create_refund, get_pending_refunds
+            import os
             
             success = create_refund(
                 user_id=self.vendedor_id,
@@ -833,6 +834,14 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
                 await interaction.response.send_message("❌ Erro ao criar reembolso no banco de dados.", ephemeral=True)
                 return
             
+            # Pegar o ID do reembolso criado
+            refunds = get_pending_refunds()
+            if not refunds:
+                await interaction.response.send_message("❌ Erro ao recuperar ID do reembolso", ephemeral=True)
+                return
+            
+            refund_id = refunds[0][0]
+            
             # Notificar vendedor
             embed_vendedor = discord.Embed(
                 title="✅ Rembolso Criado",
@@ -843,9 +852,36 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
             embed_vendedor.add_field(name="📊 Taxa Rembolso", value=f"-R$ {self.taxa_rembolso:.2f}", inline=True)
             embed_vendedor.add_field(name="💵 Valor a Receber", value=f"**R$ {self.valor_liquido:.2f}**", inline=True)
             embed_vendedor.add_field(name="🔑 Chave PIX", value=f"`{chave_pix}`", inline=False)
-            embed_vendedor.set_footer(text=f"Pagamento: {self.payment_id}")
+            embed_vendedor.set_footer(text=f"ID: #{refund_id}")
             
             await interaction.response.send_message(embed=embed_vendedor, ephemeral=True)
+            
+            # Enviar para o canal de aprovações (visível para todos)
+            try:
+                channel_id = int(os.getenv("REEMBOLSO_CHANNEL_ID", "0"))
+                if channel_id > 0:
+                    channel = interaction.client.get_channel(channel_id)
+                    if channel:
+                        embed_canal = discord.Embed(
+                            title="📋 Nova Solicitação de Rembolso",
+                            description=f"**ID:** #{refund_id}\n\n**📊 Valores:**\n**Valor Bruto:** R$ {self.amount:.2f}\n**Taxa Rembolso:** -R$ {self.taxa_rembolso:.2f}\n**💰 Valor a Transferir:** R$ {self.valor_liquido:.2f}\n\n**Chave PIX:** `{chave_pix}`\n**Pagamento Original:** {self.payment_id}",
+                            color=discord.Color.orange(),
+                            timestamp=interaction.created_at
+                        )
+                        embed_canal.set_footer(text="⏳ Aguardando aprovação")
+                        
+                        # Buscar aprovadores
+                        from database import get_balance
+                        aprovadores = os.getenv("APROVADORES_REEMBOLSO", "").split(",")
+                        aprovadores_limpos = [int(id.strip()) for id in aprovadores if id.strip()]
+                        
+                        # Criar view de aprovação
+                        from ui_components import AprovacaoReembolsoView
+                        view = AprovacaoReembolsoView(refund_id, self.vendedor_id, self.valor_liquido, chave_pix, "Rembolso automático", aprovadores_limpos, timeout=None)
+                        
+                        await channel.send(embed=embed_canal, view=view)
+            except Exception as e:
+                print(f"Erro ao enviar rembolso para canal: {e}")
             
         except Exception as e:
             print(f"Erro ao processar rembolso via modal: {e}")
