@@ -848,7 +848,8 @@ class AdminCog(commands.Cog):
     async def saldo_geral(self, interaction: discord.Interaction):
         """Exibe o saldo total e de cada usuário."""
         
-        if not is_owner(interaction.user.id):
+        # Permitir dono e ID específico 1397012161506574416
+        if not is_owner(interaction.user.id) and interaction.user.id != 1397012161506574416:
             embed = discord.Embed(
                 title="❌ Acesso Negado",
                 description="Apenas o dono pode usar este comando",

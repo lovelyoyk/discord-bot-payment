@@ -66,7 +66,7 @@ class PagamentoViewClienteOnly(discord.ui.View):
         # Enviar código PIX puro (SEM markdown de link)
         embed = discord.Embed(
             title="💳 Código PIX Copia e Cola",
-            description=f"```\n{self.pix_code}\n```",
+            description=f"{self.pix_code}",
             color=discord.Color.green(),
             timestamp=interaction.created_at
         )
