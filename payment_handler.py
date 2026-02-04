@@ -112,12 +112,66 @@ class MisticPayHandler:
     
     @staticmethod
     def verify_webhook(request_body: Dict) -> Optional[Dict]:
-        """Verifica e processa webhook de pagamento MisticPay."""
+        """Verifica e processa webhook de pagamento MisticPay.
+        
+        Suporta dois formatos:
+        1. Com evento estruturado: {"event": "transaction.paid", "data": {...}}
+        2. Com dados diretos (novo formato MisticPay): {"transactionId": "...", "status": "COMPLETO", ...}
+        """
         try:
-            from database import get_payment_receiver, db  # Importar db para debug
+            from database import get_payment_receiver
             
             print(f"[Webhook] Dados recebidos: {request_body}")
             
+            # Verificar se é o novo formato (sem "event" e "data")
+            if "event" not in request_body and "transactionId" in request_body:
+                print(f"[Webhook] ℹ️ Detectado novo formato de webhook da MisticPay")
+                
+                # Novo formato: dados diretos no root
+                payment_id = request_body.get("transactionId")
+                status = request_body.get("status", "").upper()
+                amount = request_body.get("value", 0)
+                
+                print(f"[Webhook] Payment ID: {payment_id}")
+                print(f"[Webhook] Status: {status}")
+                print(f"[Webhook] Valor: R$ {amount}")
+                
+                # Verificar se o pagamento foi completado
+                if status == "COMPLETO":
+                    receiver_id = get_payment_receiver(payment_id)
+                    
+                    if not receiver_id:
+                        print(f"[Webhook] ⚠️ AVISO: Receiver não encontrado para payment_id: '{payment_id}'")
+                        print(f"[Webhook] Procurando todos os pagamentos no banco para debug...")
+                        
+                        # Debug: listar todos os pagamentos
+                        import sqlite3
+                        from database import DB_PATH
+                        try:
+                            conn = sqlite3.connect(DB_PATH)
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT payment_id, receiver_id, amount, internal_id FROM payments LIMIT 10")
+                            todos = cursor.fetchall()
+                            print(f"[Webhook] Pagamentos no banco: {todos}")
+                            conn.close()
+                        except Exception as debug_err:
+                            print(f"[Webhook] Erro ao fazer debug: {debug_err}")
+                        
+                        return None
+                    
+                    print(f"[Webhook] ✅ Pagamento confirmado: {payment_id} | R$ {amount:.2f} | Receiver: {receiver_id}")
+                    
+                    return {
+                        "payment_id": payment_id,
+                        "receiver_id": receiver_id,
+                        "amount": amount,
+                        "status": "completed"
+                    }
+                else:
+                    print(f"[Webhook] Status não é COMPLETO: {status}")
+                    return None
+            
+            # Formato antigo: com "event" e "data"
             event_type = request_body.get("event")
             print(f"[Webhook] Tipo de evento: {event_type}")
             
@@ -139,7 +193,6 @@ class MisticPayHandler:
                 print(f"[Webhook] Valor: {amount}")
                 
                 # MisticPay não envia receiver_id no webhook, precisamos buscar no banco
-                # Vamos usar o payment_id para encontrar o receiver
                 receiver_id = get_payment_receiver(payment_id)
                 
                 if not receiver_id:
@@ -152,7 +205,7 @@ class MisticPayHandler:
                     try:
                         conn = sqlite3.connect(DB_PATH)
                         cursor = conn.cursor()
-                        cursor.execute("SELECT payment_id, receiver_id, amount FROM payments LIMIT 10")
+                        cursor.execute("SELECT payment_id, receiver_id, amount, internal_id FROM payments LIMIT 10")
                         todos = cursor.fetchall()
                         print(f"[Webhook] Pagamentos no banco: {todos}")
                         conn.close()
