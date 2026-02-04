@@ -1,8 +1,38 @@
 import discord
 import time
+import os
 from typing import Callable, Optional
 from database import get_balance, set_pix_key
 from embed_utils import padronizar_embed
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+# Configurações de limites
+VALOR_MAXIMO_TRANSACAO = float(os.getenv("VALOR_MAXIMO_TRANSACAO", "10000"))
+NOTIFICACAO_CHANNEL_ID = int(os.getenv("NOTIFICACAO_CHANNEL_ID", "0"))
+RATE_LIMIT_SEGUNDOS = int(os.getenv("RATE_LIMIT_SEGUNDOS", "3"))
+
+# Sistema de Rate Limiting
+class RateLimiter:
+    """Proteção contra spam de requisições"""
+    def __init__(self, max_requests=1, time_window=3):
+        self.requests = defaultdict(list)
+        self.time_window = time_window
+    
+    def is_rate_limited(self, user_id: int) -> bool:
+        """Verifica se o usuário atingiu o limite de requisições"""
+        now = datetime.now()
+        # Remover requisições antigas
+        self.requests[user_id] = [req_time for req_time in self.requests[user_id] 
+                                  if (now - req_time).seconds < self.time_window]
+        return len(self.requests[user_id]) > 0
+    
+    def add_request(self, user_id: int):
+        """Registra uma nova requisição do usuário"""
+        self.requests[user_id].append(datetime.now())
+
+# Instâncias globais
+rate_limiter = RateLimiter(time_window=RATE_LIMIT_SEGUNDOS)
 
 class PagamentoView(discord.ui.View):
     """View com botão de pagamento"""
@@ -256,6 +286,24 @@ class AprovacaoReembolsoView(discord.ui.View):
     
     @discord.ui.button(label="Aprovar Reembolso", style=discord.ButtonStyle.green, emoji="✅")
     async def aprovar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Verificar rate limit
+        if rate_limiter.is_rate_limited(interaction.user.id):
+            await interaction.response.send_message(
+                f"⏳ Aguarde {RATE_LIMIT_SEGUNDOS} segundos antes de fazer outra ação.",
+                ephemeral=True
+            )
+            return
+        
+        rate_limiter.add_request(interaction.user.id)
+        
+        # Verificar limite máximo de transação
+        if self.amount > VALOR_MAXIMO_TRANSACAO:
+            await interaction.response.send_message(
+                f"❌ Valor de reembolso (R$ {self.amount:.2f}) excede o limite máximo de R$ {VALOR_MAXIMO_TRANSACAO:.2f}",
+                ephemeral=True
+            )
+            return
+        
         await interaction.response.defer()
         
         try:
@@ -344,6 +392,22 @@ class AprovacaoReembolsoView(discord.ui.View):
                 except:
                     pass
                 
+                # 🆕 NOTIFICAR NO CANAL GERAL
+                try:
+                    if NOTIFICACAO_CHANNEL_ID > 0:
+                        channel = interaction.client.get_channel(NOTIFICACAO_CHANNEL_ID)
+                        if channel:
+                            embed_canal = discord.Embed(
+                                title="✅ Reembolso Aprovado",
+                                description=f"**Usuário:** <@{self.user_id}>\n**ID:** #{self.refund_id}\n**Valor:** R$ {self.amount:.2f}\n**Aprovado por:** {interaction.user.mention}",
+                                color=discord.Color.green(),
+                                timestamp=interaction.created_at
+                            )
+                            embed_canal.set_footer(text="✅ Status: Transferência concluída")
+                            await channel.send(embed=embed_canal)
+                except Exception as e:
+                    print(f"Erro ao notificar canal: {e}")
+                
                 self.stop()
             else:
                 # Erro na transferência
@@ -367,6 +431,16 @@ class AprovacaoReembolsoView(discord.ui.View):
     
     @discord.ui.button(label="Rejeitar Reembolso", style=discord.ButtonStyle.red, emoji="❌")
     async def rejeitar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Verificar rate limit
+        if rate_limiter.is_rate_limited(interaction.user.id):
+            await interaction.response.send_message(
+                f"⏳ Aguarde {RATE_LIMIT_SEGUNDOS} segundos antes de fazer outra ação.",
+                ephemeral=True
+            )
+            return
+        
+        rate_limiter.add_request(interaction.user.id)
+        
         from database import reject_refund
         
         # Rejeitar no banco
@@ -396,6 +470,22 @@ class AprovacaoReembolsoView(discord.ui.View):
                 await user.send(embed=embed_user)
             except:
                 pass
+            
+            # 🆕 NOTIFICAR NO CANAL GERAL
+            try:
+                if NOTIFICACAO_CHANNEL_ID > 0:
+                    channel = interaction.client.get_channel(NOTIFICACAO_CHANNEL_ID)
+                    if channel:
+                        embed_canal = discord.Embed(
+                            title="❌ Reembolso Rejeitado",
+                            description=f"**Usuário:** <@{self.user_id}>\n**ID:** #{self.refund_id}\n**Valor:** R$ {self.amount:.2f}\n**Rejeitado por:** {interaction.user.mention}",
+                            color=discord.Color.red(),
+                            timestamp=interaction.created_at
+                        )
+                        embed_canal.set_footer(text="❌ Status: Solicitação rejeitada")
+                        await channel.send(embed=embed_canal)
+            except Exception as e:
+                print(f"Erro ao notificar canal: {e}")
             
             self.stop()
         else:
@@ -466,6 +556,24 @@ class AprovacaoSaqueView(discord.ui.View):
     
     @discord.ui.button(label="Aprovar Saque", style=discord.ButtonStyle.green, emoji="✅")
     async def aprovar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Verificar rate limit
+        if rate_limiter.is_rate_limited(interaction.user.id):
+            await interaction.response.send_message(
+                f"⏳ Aguarde {RATE_LIMIT_SEGUNDOS} segundos antes de fazer outra ação.",
+                ephemeral=True
+            )
+            return
+        
+        rate_limiter.add_request(interaction.user.id)
+        
+        # Verificar limite máximo de transação
+        if self.amount > VALOR_MAXIMO_TRANSACAO:
+            await interaction.response.send_message(
+                f"❌ Valor de saque (R$ {self.amount:.2f}) excede o limite máximo de R$ {VALOR_MAXIMO_TRANSACAO:.2f}",
+                ephemeral=True
+            )
+            return
+        
         try:
             from database import get_balance, add_balance
             

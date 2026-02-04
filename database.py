@@ -908,4 +908,47 @@ def get_financeiro_info(user_id: int) -> dict:
         print(f"Erro ao buscar info do financeiro: {e}")
         return None
     finally:
+        cursor.close()
+        conn.close()
+
+def get_audit_trail(refund_id: int) -> dict:
+    """Retorna informações de auditoria completas de um reembolso"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                r.id,
+                r.amount,
+                r.reason,
+                r.user_id,
+                r.status,
+                r.created_at,
+                r.approved_by,
+                r.approved_at,
+                u.role
+            FROM refunds r
+            LEFT JOIN financeiros u ON r.approved_by = u.user_id
+            WHERE r.id = ?
+        """, (refund_id,))
+        
+        result = cursor.fetchone()
+        if result:
+            return {
+                "refund_id": result[0],
+                "amount": result[1],
+                "reason": result[2],
+                "user_id": result[3],
+                "status": result[4],
+                "created_at": result[5],
+                "approved_by": result[6],
+                "approved_at": result[7],
+                "approver_role": result[8]
+            }
+        return None
+    except Exception as e:
+        print(f"Erro ao buscar auditoria: {e}")
+        return None
+    finally:
         conn.close()

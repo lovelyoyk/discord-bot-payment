@@ -310,6 +310,18 @@ class PaymentCog(commands.Cog):
         """Cria um link de pagamento com QR Code e botão de pagamento."""
         
         try:
+            # Verificar limite máximo de transação
+            valor_maximo = float(os.getenv("VALOR_MAXIMO_TRANSACAO", "10000"))
+            if valor > valor_maximo:
+                embed = discord.Embed(
+                    title="❌ Valor Excede o Limite",
+                    description=f"O valor de **R$ {valor:.2f}** excede o limite máximo de **R$ {valor_maximo:.2f}** por transação.",
+                    color=discord.Color.red()
+                )
+                padronizar_embed(embed, interaction, user=interaction.user)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
             # Verificar permissão: é vendedor, tem role vendedor, ou é o dono
             is_allowed = False
             
