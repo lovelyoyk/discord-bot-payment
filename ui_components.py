@@ -780,8 +780,6 @@ class ReebolsarPagamentoView(discord.ui.View):
         valor_bruto = float(self.amount)
         taxa_rembolso = self.taxa_fixa
         valor_liquido = valor_bruto - taxa_rembolso
-        taxa_saque = 5.00
-        valor_apos_saque = valor_liquido - taxa_saque
         
         # Criar e exibir modal
         modal = ModalChavePIX(
@@ -789,9 +787,7 @@ class ReebolsarPagamentoView(discord.ui.View):
             amount=valor_bruto,
             vendedor_id=self.vendedor_id,
             taxa_rembolso=taxa_rembolso,
-            valor_liquido=valor_liquido,
-            taxa_saque=taxa_saque,
-            valor_apos_saque=valor_apos_saque
+            valor_liquido=valor_liquido
         )
         
         await interaction.response.send_modal(modal)
@@ -800,15 +796,13 @@ class ReebolsarPagamentoView(discord.ui.View):
 class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
     """Modal para inserir a chave PIX do cliente"""
     
-    def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_rembolso: float, valor_liquido: float, taxa_saque: float, valor_apos_saque: float):
+    def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_rembolso: float, valor_liquido: float):
         super().__init__()
         self.payment_id = payment_id
         self.amount = amount
         self.vendedor_id = vendedor_id
         self.taxa_rembolso = taxa_rembolso
         self.valor_liquido = valor_liquido
-        self.taxa_saque = taxa_saque
-        self.valor_apos_saque = valor_apos_saque
         
         self.chave_pix_input = discord.ui.TextInput(
             label="Chave PIX do Cliente",
@@ -847,9 +841,7 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
             )
             embed_vendedor.add_field(name="💰 Valor Bruto", value=f"R$ {self.amount:.2f}", inline=True)
             embed_vendedor.add_field(name="📊 Taxa Rembolso", value=f"-R$ {self.taxa_rembolso:.2f}", inline=True)
-            embed_vendedor.add_field(name="💵 Saldo Reembolso", value=f"R$ {self.valor_liquido:.2f}", inline=True)
-            embed_vendedor.add_field(name="💳 Taxa Saque", value=f"-R$ {self.taxa_saque:.2f}", inline=True)
-            embed_vendedor.add_field(name="🏦 Você Receberá", value=f"**R$ {self.valor_apos_saque:.2f}**", inline=True)
+            embed_vendedor.add_field(name="💵 Valor a Receber", value=f"**R$ {self.valor_liquido:.2f}**", inline=True)
             embed_vendedor.add_field(name="🔑 Chave PIX", value=f"`{chave_pix}`", inline=False)
             embed_vendedor.set_footer(text=f"Pagamento: {self.payment_id}")
             
