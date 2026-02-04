@@ -790,34 +790,6 @@ class PaymentCog(commands.Cog):
     
     # COMANDOS APENAS PARA DONO
     
-    @app_commands.command(name="listar_usuarios", description="Lista todos os usuários e seus saldos (apenas dono)")
-    async def list_users(self, interaction: discord.Interaction):
-        """Lista todos os usuários e seus saldos (apenas dono)."""
-        if interaction.user.id != OWNER_ID:
-            await interaction.response.send_message("❌ Apenas o dono do bot pode usar este comando.", ephemeral=True)
-            return
-        
-        import sqlite3
-        conn = sqlite3.connect(os.getenv("DATABASE_PATH", "./data/bot.db"))
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id, balance FROM users ORDER BY balance DESC LIMIT 20")
-        users = cursor.fetchall()
-        conn.close()
-        
-        if not users:
-            await interaction.response.send_message("Nenhum usuário encontrado.")
-            return
-        
-        embed = discord.Embed(
-            title="👥 Lista de Usuários",
-            color=discord.Color.blue()
-        )
-        
-        for user_id, balance in users:
-            embed.add_field(name=f"ID: {user_id}", value=f"R$ {balance:.2f}", inline=False)
-        
-        await interaction.response.send_message(embed=embed)
-    
     @app_commands.command(name="config_emojis", description="Configura os emojis para notificações")
     @app_commands.describe(
         tipo="Tipo de emoji a configurar",
