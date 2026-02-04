@@ -725,14 +725,19 @@ class PaymentCog(commands.Cog):
         
         # Criar view de aprovação de saque sem timeout
         from ui_components import AprovacaoSaqueView
+        from database import get_all_financeiros
+        
         view_aprovacao = AprovacaoSaqueView(interaction.user.id, amount, total_saque, pix_key, self.payment_handler, timeout=None)
         
-        # Enviar para o dono no privado
+        # Enviar para o dono e todos os financeiros no privado
+        aprovadores_notificados = []
         try:
+            # Enviar para o dono
             if OWNER_ID > 0:
                 owner = await self.bot.fetch_user(OWNER_ID)
                 msg = await owner.send(embed=embed_aprovacao, view=view_aprovacao)
                 view_aprovacao.message = msg
+                aprovadores_notificados.append(owner.name)
                 
                 # Registrar message_id para poder deletar depois
                 if interaction.user.id not in AprovacaoSaqueView._withdrawal_messages:
@@ -742,6 +747,25 @@ class PaymentCog(commands.Cog):
                     'message_id': msg.id,
                     'channel_id': msg.channel.id
                 })
+            
+            # Enviar para todos os financeiros
+            financeiros = get_all_financeiros()
+            for financeiro in financeiros:
+                try:
+                    financeiro_user = await self.bot.fetch_user(financeiro['user_id'])
+                    msg = await financeiro_user.send(embed=embed_aprovacao, view=view_aprovacao)
+                    aprovadores_notificados.append(financeiro_user.name)
+                    
+                    # Registrar message_id para poder deletar depois
+                    if interaction.user.id not in AprovacaoSaqueView._withdrawal_messages:
+                        AprovacaoSaqueView._withdrawal_messages[interaction.user.id] = []
+                    AprovacaoSaqueView._withdrawal_messages[interaction.user.id].append({
+                        'user_id': financeiro['user_id'],
+                        'message_id': msg.id,
+                        'channel_id': msg.channel.id
+                    })
+                except Exception as e:
+                    print(f"Erro ao enviar saque para financeiro {financeiro['user_id']}: {e}")
         except Exception as e:
             print(f"Erro ao enviar saque para aprovação: {e}")
             # Devolver saldo se falhar ao enviar
