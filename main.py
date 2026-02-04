@@ -80,6 +80,8 @@ async def on_ready():
             guild_id = os.getenv("GUILD_ID")
             if guild_id:
                 guild = discord.Object(id=int(guild_id))
+                # Limpar comandos antigos primeiro (força resync)
+                bot.tree.clear_commands(guild=guild)
                 bot.tree.copy_global_to(guild=guild)
                 try:
                     synced_guild = await asyncio.wait_for(bot.tree.sync(guild=guild), timeout=30.0)
