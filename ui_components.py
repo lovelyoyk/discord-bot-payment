@@ -6,6 +6,7 @@ from database import get_balance, set_pix_key
 from embed_utils import padronizar_embed
 from collections import defaultdict
 from datetime import datetime, timedelta
+from modals_saque import ModalConfirmarSaqueTudo, ModalEscolherValorSaque
 
 # Configurações de limites
 VALOR_MAXIMO_TRANSACAO = float(os.getenv("VALOR_MAXIMO_TRANSACAO", "10000"))
@@ -98,13 +99,20 @@ class SaldoActionView(discord.ui.View):
         self.user_id = user_id
         self.balance = balance
         
-        # Só adiciona botão de saque se for vendedor e tiver saldo
-        if is_vendedor and balance > 0:
+        # Sempre adiciona botões de saque se tiver saldo
+        if balance > 0:
             self.add_item(discord.ui.Button(
-                label="💸 Sacar",
+                label="💸 Sacar Tudo",
                 style=discord.ButtonStyle.green,
-                custom_id="sacar",
+                custom_id="sacar_tudo",
                 emoji="💸"
+            ))
+            
+            self.add_item(discord.ui.Button(
+                label="🔢 Escolher Valor",
+                style=discord.ButtonStyle.green,
+                custom_id="sacar_valor",
+                emoji="🔢"
             ))
         
         # Adiciona botão de histórico sempre
@@ -130,23 +138,16 @@ class SaldoActionView(discord.ui.View):
         
         custom_id = interaction.data.get("custom_id", "")
         
-        if custom_id == "sacar":
-            embed_info = discord.Embed(
-                title="💸 Como Sacar",
-                description="Use o comando `/sacar` para solicitar um saque",
-                color=discord.Color.green()
-            )
-            embed_info.add_field(
-                name="📝 Opções de Saque",
-                value=f"**`/sacar 10.50`** → Saca R$ 10.50\n**`/sacar`** → Saca TODO o saldo (R$ {self.balance:.2f})",
-                inline=False
-            )
-            embed_info.add_field(
-                name="⚠️ Importante",
-                value="• Taxa de saque será descontada\n• Precisa de aprovação\n• Chave PIX deve estar configurada",
-                inline=False
-            )
-            await interaction.response.send_message(embed=embed_info, ephemeral=True)
+        if custom_id == "sacar_tudo":
+            # Sacar todo o saldo
+            modal = ModalConfirmarSaqueTudo(self.user_id, self.balance)
+            await interaction.response.send_modal(modal)
+        
+        elif custom_id == "sacar_valor":
+            # Abrir modal para escolher valor
+            modal = ModalEscolherValorSaque(self.user_id, self.balance)
+            await interaction.response.send_modal(modal)
+        
         elif custom_id == "historico":
             await interaction.response.send_message(
                 "📜 Use o comando `/historico` para ver suas transações.",

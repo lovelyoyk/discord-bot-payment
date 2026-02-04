@@ -542,8 +542,7 @@ class PaymentCog(commands.Cog):
             except:
                 await interaction.response.send_message(embed=embed_erro, ephemeral=True)
     
-    @app_commands.command(name="sacar", description="Saca saldo para sua chave PIX (dono e vendedores)")
-    @app_commands.describe(amount="Valor a sacar (deixe em branco para sacar tudo)")
+    @app_commands.command(name="sacar", description="Saca saldo para sua chave PIX (selecione o valor)")
     async def withdraw(self, interaction: discord.Interaction, amount: float = None):
         """Saca saldo para sua chave PIX (dono e vendedores) com confirmacao."""
         
