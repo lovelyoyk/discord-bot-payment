@@ -258,7 +258,7 @@ class AprovacaoReembolsoView(discord.ui.View):
     _processing_refunds = {}  # Proteção contra concorrência
     _refund_messages = {}  # Armazena message_ids para cada refund_id
     
-    def __init__(self, refund_id: int, user_id: int, amount: float, pix_key: str, reason: str, aprovador_ids: list, timeout: int = None):
+    def __init__(self, refund_id: int, user_id: int, amount: float, pix_key: str, reason: str, aprovador_ids: list, timeout: int = None, payment_id: str = None):
         super().__init__(timeout=timeout)
         self.refund_id = refund_id
         self.user_id = user_id
@@ -269,6 +269,7 @@ class AprovacaoReembolsoView(discord.ui.View):
         self.aprovado = None
         self.aprovador_id = None
         self.processado = False
+        self.payment_id = payment_id  # 🆕 Guardar payment_id para usar no channel
         
         # Inicializar lista de mensagens para este reembolso
         if refund_id not in self._refund_messages:
@@ -406,7 +407,27 @@ class AprovacaoReembolsoView(discord.ui.View):
                             embed_canal.set_footer(text="✅ Status: Transferência concluída")
                             await channel.send(embed=embed_canal)
                 except Exception as e:
-                    print(f"Erro ao notificar canal: {e}")
+                    print(f"Erro ao notificar canal geral: {e}")
+                
+                # 🆕 NOTIFICAR NO CANAL ONDE O /COBRAR FOI USADO
+                try:
+                    if self.payment_id:
+                        from database import get_payment_channel
+                        channel_id = get_payment_channel(self.payment_id)
+                        if channel_id and channel_id > 0:
+                            channel = interaction.client.get_channel(channel_id)
+                            if channel:
+                                embed_canal_original = discord.Embed(
+                                    title="✅ Reembolso Aprovado",
+                                    description=f"O reembolso para <@{self.user_id}> no valor de **R$ {self.amount:.2f}** foi aprovado!\n\n**Aprovado por:** {interaction.user.mention}",
+                                    color=discord.Color.green(),
+                                    timestamp=interaction.created_at
+                                )
+                                embed_canal_original.set_footer(text=f"ID: #{self.refund_id}")
+                                await channel.send(embed=embed_canal_original)
+                except Exception as e:
+                    print(f"Erro ao notificar canal original: {e}")
+                
                 
                 self.stop()
             else:
@@ -485,7 +506,26 @@ class AprovacaoReembolsoView(discord.ui.View):
                         embed_canal.set_footer(text="❌ Status: Solicitação rejeitada")
                         await channel.send(embed=embed_canal)
             except Exception as e:
-                print(f"Erro ao notificar canal: {e}")
+                print(f"Erro ao notificar canal geral: {e}")
+            
+            # 🆕 NOTIFICAR NO CANAL ONDE O /COBRAR FOI USADO
+            try:
+                if self.payment_id:
+                    from database import get_payment_channel
+                    channel_id = get_payment_channel(self.payment_id)
+                    if channel_id and channel_id > 0:
+                        channel = interaction.client.get_channel(channel_id)
+                        if channel:
+                            embed_canal_original = discord.Embed(
+                                title="❌ Reembolso Rejeitado",
+                                description=f"O reembolso para <@{self.user_id}> no valor de **R$ {self.amount:.2f}** foi rejeitado.\n\n**Rejeitado por:** {interaction.user.mention}",
+                                color=discord.Color.red(),
+                                timestamp=interaction.created_at
+                            )
+                            embed_canal_original.set_footer(text=f"ID: #{self.refund_id}")
+                            await channel.send(embed=embed_canal_original)
+            except Exception as e:
+                print(f"Erro ao notificar canal original: {e}")
             
             self.stop()
         else:
@@ -973,7 +1013,7 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
             
             # Criar view de aprovação
             from ui_components import AprovacaoReembolsoView
-            view = AprovacaoReembolsoView(refund_id, self.vendedor_id, self.valor_liquido, chave_pix, "Rembolso automático", aprovadores_limpos, timeout=None)
+            view = AprovacaoReembolsoView(refund_id, self.vendedor_id, self.valor_liquido, chave_pix, "Rembolso automático", aprovadores_limpos, timeout=None, payment_id=self.payment_id)
             
             # Criar embed para aprovadores
             embed_aprovacao = discord.Embed(
