@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - LS Aluguel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: #000000;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar {
+            background: #1a1a1a;
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: #cbd5e0;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: #333333;
+            color: white;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(255,255,255,0.1);
+            transition: transform 0.3s;
+            background: #1a1a1a;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: white;
+            border: 1px solid #333;
+        }
+        .stat-card.success {
+            background: linear-gradient(135deg, #0a5f4e 0%, #1a8c6a 100%);
+        }
+        .stat-card.warning {
+            background: linear-gradient(135deg, #8a2435 0%, #c93648 100%);
+        }
+        .stat-card.info {
+            background: linear-gradient(135deg, #1a4f7e 0%, #2878b8 100%);
+        }
+        .table-hover tbody tr:hover {
+            background-color: #2a2a2a;
+            cursor: pointer;
+        }
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .search-box {
+            border-radius: 25px;
+            padding: 10px 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .brand {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+        .card-header {
+            background: #1a1a1a !important;
+            color: white;
+            border-bottom: 1px solid #333;
+        }
+        .table {
+            color: #e0e0e0;
+        }
+        .table thead th {
+            background: #2a2a2a;
+            color: white;
+            border-color: #333;
+        }
+        .table td {
+            border-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar">
+                <div class="brand">
+                    <i class="bi bi-cash-coin"></i> LS Aluguel
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    <a class="nav-link" href="#pagamentos"><i class="bi bi-credit-card"></i> Pagamentos</a>
+                    <a class="nav-link" href="/reembolsos"><i class="bi bi-arrow-return-left"></i> Reembolsos</a>
+                    <a class="nav-link" href="#usuarios"><i class="bi bi-people"></i> Usuários</a>
+                    <a class="nav-link" href="#stats"><i class="bi bi-bar-chart"></i> Estatísticas</a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="text-white"><i class="bi bi-shield-check"></i> Painel Administrativo</h1>
+                    <div class="text-white">
+                        <i class="bi bi-clock"></i> <span id="currentTime"></span>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card success">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Total Arrecadado</h6>
+                                        <h3 class="mb-0">R$ {{ "%.2f"|format(valor_total) }}</h3>
+                                    </div>
+                                    <i class="bi bi-currency-dollar" style="font-size: 40px;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Pagamentos</h6>
+                                        <h3 class="mb-0">{{ total_pagamentos }}</h3>
+                                    </div>
+                                    <i class="bi bi-receipt" style="font-size: 40px;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card warning">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Reembolsos</h6>
+                                        <h3 class="mb-0">R$ {{ "%.2f"|format(valor_reembolsos) }}</h3>
+                                    </div>
+                                    <i class="bi bi-arrow-counterclockwise" style="font-size: 40px;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stat-card info">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="text-uppercase mb-1">Usuários Ativos</h6>
+                                        <h3 class="mb-0">{{ total_usuarios }}</h3>
+                                    </div>
+                                    <i class="bi bi-people-fill" style="font-size: 40px;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Section -->
+                <div class="row mb-4" id="stats">
+                    <div class="col-md-8 mb-3">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Vendas dos Últimos 7 Dias</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="salesChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-activity"></i> Últimas Transações</h5>
+                            </div>
+                            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                {% for t in ultimas_transacoes %}
+                                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                    <div>
+                                        <small class="text-muted">ID: {{ t.id }}</small>
+                                        <div class="fw-bold">R$ {{ "%.2f"|format(t.valor) }}</div>
+                                    </div>
+                                    <span class="badge badge-status {% if t.status == 'completed' %}bg-success{% elif t.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ t.status }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payments Table -->
+                <div class="card mb-4" id="pagamentos">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-credit-card"></i> Pagamentos Recentes</h5>
+                            <div class="d-flex gap-2">
+                                <input type="text" class="form-control search-box" placeholder="Buscar..." id="searchInput" value="{{ search }}">
+                                <select class="form-select" id="statusFilter">
+                                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todos</option>
+                                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Concluído</option>
+                                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pendente</option>
+                                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Falhou</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Cliente</th>
+                                        <th>Pagador</th>
+                                        <th>Valor</th>
+                                        <th>Status</th>
+                                        <th>Data</th>
+                                        <th>Ref</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in pagamentos %}
+                                    <tr>
+                                        <td><strong>#{{ p.payment_id }}</strong></td>
+                                        <td><i class="bi bi-person"></i> {{ p.receiver_id }}</td>
+                                        <td><i class="bi bi-person-check"></i> {{ p.payer_id or 'N/A' }}</td>
+                                        <td><strong class="text-success">R$ {{ "%.2f"|format(p.amount) }}</strong></td>
+                                        <td>
+                                            <span class="badge badge-status {% if p.status == 'completed' %}bg-success{% elif p.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ p.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ p.created_at }}</td>
+                                        <td><code>{{ p.misticpay_id or 'N/A' }}</code></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refunds Table -->
+                <div class="card mb-4" id="reembolsos">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-arrow-return-left"></i> Reembolsos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Payment ID</th>
+                                        <th>Motivo</th>
+                                        <th>Valor</th>
+                                        <th>Status</th>
+                                        <th>Data</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in reembolsos %}
+                                    <tr>
+                                        <td><strong>#{{ r.id }}</strong></td>
+                                        <td>#{{ r.payment_id or 'N/A' }}</td>
+                                        <td>{{ r.reason or 'N/A' }}</td>
+                                        <td><strong class="text-danger">R$ {{ "%.2f"|format(r.amount) }}</strong></td>
+                                        <td><span class="badge bg-info">{{ r.status }}</span></td>
+                                        <td>{{ r.created_at }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="card mb-4" id="usuarios">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-people"></i> Usuários</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Email</th>
+                                        <th>Chave PIX</th>
+                                        <th>Saldo</th>
+                                        <th>Vendedor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for u in usuarios %}
+                                    <tr>
+                                        <td><strong>{{ u.user_id }}</strong></td>
+                                        <td>{{ u.user_id }}</td>
+                                        <td>N/A</td>
+                                        <td><code>{{ u.pix_key or 'N/A' }}</code></td>
+                                        <td><strong class="{% if u.balance > 0 %}text-success{% else %}text-muted{% endif %}">R$ {{ "%.2f"|format(u.balance or 0) }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-secondary">Cliente</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Atualizar relógio
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('pt-BR');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // Chart.js - Vendas dos últimos 7 dias
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('salesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.date),
+                        datasets: [{
+                            label: 'Valor (R$)',
+                            data: data.map(d => d.valor),
+                            borderColor: 'rgb(76, 175, 80)',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'white'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'white'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+        // Filtros
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+
+        function applyFilters() {
+            const search = searchInput.value;
+            const status = statusFilter.value;
+            window.location.href = `/?search=${search}&status=${status}`;
+        }
+
+        searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') applyFilters();
+        });
+
+        statusFilter.addEventListener('change', applyFilters);
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
