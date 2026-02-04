@@ -438,103 +438,90 @@ class AdminCog(commands.Cog):
             return
         
         # Criar reembolso pendente (valor já é o final que o usuário receberá)
-        if create_refund(usuario.id, valor_final, motivo):
-            # Buscar o ID do reembolso criado
-            from database import get_pending_refunds
-            refunds = get_pending_refunds()
-            if not refunds:
-                await interaction.followup.send("❌ Erro ao criar reembolso", ephemeral=True)
-                return
-            
-            # Pegar o último reembolso criado (mais recente)
-            refund_id = refunds[0][0]
-            
-            # Criar embed de solicitação
-            embed_solicitacao = discord.Embed(
-                title="📋 Solicitação de Reembolso",
-                description=f"**ID:** #{refund_id}\n**Valor solicitado:** R$ {valor:.2f}\n**Taxa de Reembolso:** -R$ {TAXA_REEMBOLSO_VALOR:.2f}\n**💰 Valor a transferir:** R$ {valor_final:.2f}\n\n**Para:** {usuario.mention} ({usuario.name})\n**Chave PIX:** `{chave_pix}`\n**Motivo:** {motivo}\n\n**Solicitado por:** {interaction.user.mention}",
+        refund_id = create_refund(usuario.id, valor_final, motivo)
+        if not refund_id:
+            await interaction.followup.send("❌ Erro ao criar reembolso", ephemeral=True)
+            return
+        
+        # Criar embed de solicitação
+        embed_solicitacao = discord.Embed(
+            title="📋 Solicitação de Reembolso",
+            description=f"**ID:** #{refund_id}\n**Valor solicitado:** R$ {valor:.2f}\n**Taxa de Reembolso:** -R$ {TAXA_REEMBOLSO_VALOR:.2f}\n**💰 Valor a transferir:** R$ {valor_final:.2f}\n\n**Para:** {usuario.mention} ({usuario.name})\n**Chave PIX:** `{chave_pix}`\n**Motivo:** {motivo}\n\n**Solicitado por:** {interaction.user.mention}",
+            color=discord.Color.orange(),
+            timestamp=interaction.created_at
+        )
+        embed_solicitacao.add_field(name="⚠️ Ação Necessária", value="Aprove ou rejeite esta solicitação usando os botões abaixo.", inline=False)
+        embed_solicitacao.set_footer(text="⏳ Aguardando aprovação")
+        try:
+            embed_solicitacao.set_thumbnail(url=usuario.display_avatar.url)
+        except:
+            pass
+        padronizar_embed(embed_solicitacao, interaction, user=usuario)
+        
+        # Criar view de aprovação
+        from ui_components import AprovacaoReembolsoView
+        view = AprovacaoReembolsoView(refund_id, usuario.id, valor_final, chave_pix, motivo, APROVADORES_REEMBOLSO, timeout=None)
+        
+        # Enviar para o canal (visível para todos)
+        try:
+            embed_canal = discord.Embed(
+                title="📋 Nova Solicitação de Reembolso",
+                description=f"**ID:** #{refund_id}\n\n**📊 Valores:**\n**Valor solicitado:** R$ {valor:.2f}\n**Taxa de Reembolso:** -R$ {TAXA_REEMBOLSO_VALOR:.2f}\n**💰 Valor a transferir (PIX):** R$ {valor_final:.2f}\n\n**Para:** {usuario.mention}\n**Chave PIX:** `{chave_pix}`\n**Motivo:** {motivo}\n\n**Solicitado por:** {interaction.user.mention}",
                 color=discord.Color.orange(),
                 timestamp=interaction.created_at
             )
-            embed_solicitacao.add_field(name="⚠️ Ação Necessária", value="Aprove ou rejeite esta solicitação usando os botões abaixo.", inline=False)
-            embed_solicitacao.set_footer(text="⏳ Aguardando aprovação")
+            embed_canal.set_footer(text="⏳ Aguardando aprovação")
+            padronizar_embed(embed_canal, interaction, user=usuario)
+            await interaction.channel.send(embed=embed_canal)
+        except:
+            pass
+        
+        # Enviar para cada aprovador no privado
+        aprovadores_notificados = []
+        for aprovador_id in APROVADORES_REEMBOLSO:
             try:
-                embed_solicitacao.set_thumbnail(url=usuario.display_avatar.url)
-            except:
-                pass
-            padronizar_embed(embed_solicitacao, interaction, user=usuario)
+                aprovador = await self.bot.fetch_user(aprovador_id)
+                msg = await aprovador.send(embed=embed_solicitacao, view=view)
+                aprovadores_notificados.append(aprovador.name)
+                
+                # Registrar message_id para poder deletar depois
+                from ui_components import AprovacaoReembolsoView
+                if refund_id not in AprovacaoReembolsoView._refund_messages:
+                    AprovacaoReembolsoView._refund_messages[refund_id] = []
+                AprovacaoReembolsoView._refund_messages[refund_id].append({
+                    'user_id': aprovador_id,
+                    'message_id': msg.id,
+                    'channel_id': msg.channel.id
+                })
+            except Exception as e:
+                print(f"Erro ao enviar DM para aprovador {aprovador_id}: {e}")
+        
+        if aprovadores_notificados:
+            embed_confirmacao = discord.Embed(
+                title="✅ Solicitação Enviada",
+                description=f"**Reembolso ID:** #{refund_id}\n**Valor:** R$ {valor:.2f}\n**Para:** {usuario.mention}\n**Motivo:** {motivo}\n\n**Aprovadores notificados:** {', '.join(aprovadores_notificados)}",
+                color=discord.Color.green(),
+                timestamp=interaction.created_at
+            )
+            embed_confirmacao.set_footer(text="✅ Solicitação registrada")
+            padronizar_embed(embed_confirmacao, interaction, user=interaction.user)
+            await interaction.followup.send(embed=embed_confirmacao, ephemeral=True)
             
-            # Criar view de aprovação
-            from ui_components import AprovacaoReembolsoView
-            view = AprovacaoReembolsoView(refund_id, usuario.id, valor_final, chave_pix, motivo, APROVADORES_REEMBOLSO, timeout=None)
-            
-            # Enviar para o canal (visível para todos)
+            # Notificar usuário que está pendente
             try:
-                embed_canal = discord.Embed(
-                    title="📋 Nova Solicitação de Reembolso",
-                    description=f"**ID:** #{refund_id}\n\n**📊 Valores:**\n**Valor solicitado:** R$ {valor:.2f}\n**Taxa de Reembolso:** -R$ {TAXA_REEMBOLSO_VALOR:.2f}\n**💰 Valor a transferir (PIX):** R$ {valor_final:.2f}\n\n**Para:** {usuario.mention}\n**Chave PIX:** `{chave_pix}`\n**Motivo:** {motivo}\n\n**Solicitado por:** {interaction.user.mention}",
+                embed_user = discord.Embed(
+                    title="⏳ Reembolso Solicitado",
+                    description=f"Seu reembolso foi solicitado e está aguardando aprovação.\n\n**📊 Detalhes:**\n**ID:** #{refund_id}\n**Valor solicitado:** R$ {valor:.2f}\n**Taxa de Reembolso:** -R$ {TAXA_REEMBOLSO_VALOR:.2f}\n**💰 Valor a receber (PIX):** R$ {valor_final:.2f}\n\n**Chave PIX:** `{chave_pix}`\n**Motivo:** {motivo}\n\nVocê será notificado quando for aprovado ou rejeitado.",
                     color=discord.Color.orange(),
                     timestamp=interaction.created_at
                 )
-                embed_canal.set_footer(text="⏳ Aguardando aprovação")
-                padronizar_embed(embed_canal, interaction, user=usuario)
-                await interaction.channel.send(embed=embed_canal)
+                embed_user.set_footer(text="⏳ Aguardando aprovação")
+                padronizar_embed(embed_user, interaction, user=usuario)
+                await usuario.send(embed=embed_user)
             except:
                 pass
-            
-            # Enviar para cada aprovador no privado
-            aprovadores_notificados = []
-            for aprovador_id in APROVADORES_REEMBOLSO:
-                try:
-                    aprovador = await self.bot.fetch_user(aprovador_id)
-                    msg = await aprovador.send(embed=embed_solicitacao, view=view)
-                    aprovadores_notificados.append(aprovador.name)
-                    
-                    # Registrar message_id para poder deletar depois
-                    from ui_components import AprovacaoReembolsoView
-                    if refund_id not in AprovacaoReembolsoView._refund_messages:
-                        AprovacaoReembolsoView._refund_messages[refund_id] = []
-                    AprovacaoReembolsoView._refund_messages[refund_id].append({
-                        'user_id': aprovador_id,
-                        'message_id': msg.id,
-                        'channel_id': msg.channel.id
-                    })
-                except Exception as e:
-                    print(f"Erro ao enviar DM para aprovador {aprovador_id}: {e}")
-            
-            if aprovadores_notificados:
-                embed_confirmacao = discord.Embed(
-                    title="✅ Solicitação Enviada",
-                    description=f"**Reembolso ID:** #{refund_id}\n**Valor:** R$ {valor:.2f}\n**Para:** {usuario.mention}\n**Motivo:** {motivo}\n\n**Aprovadores notificados:** {', '.join(aprovadores_notificados)}",
-                    color=discord.Color.green(),
-                    timestamp=interaction.created_at
-                )
-                embed_confirmacao.set_footer(text="✅ Solicitação registrada")
-                padronizar_embed(embed_confirmacao, interaction, user=interaction.user)
-                await interaction.followup.send(embed=embed_confirmacao, ephemeral=True)
-                
-                # Notificar usuário que está pendente
-                try:
-                    embed_user = discord.Embed(
-                        title="⏳ Reembolso Solicitado",
-                        description=f"Seu reembolso foi solicitado e está aguardando aprovação.\n\n**📊 Detalhes:**\n**ID:** #{refund_id}\n**Valor solicitado:** R$ {valor:.2f}\n**Taxa de Reembolso:** -R$ {TAXA_REEMBOLSO_VALOR:.2f}\n**💰 Valor a receber (PIX):** R$ {valor_final:.2f}\n\n**Chave PIX:** `{chave_pix}`\n**Motivo:** {motivo}\n\nVocê será notificado quando for aprovado ou rejeitado.",
-                        color=discord.Color.orange(),
-                        timestamp=interaction.created_at
-                    )
-                    embed_user.set_footer(text="⏳ Aguardando aprovação")
-                    padronizar_embed(embed_user, interaction, user=usuario)
-                    await usuario.send(embed=embed_user)
-                except:
-                    pass
-            else:
-                await interaction.followup.send("❌ Não foi possível notificar nenhum aprovador. Verifique se os IDs estão corretos.", ephemeral=True)
         else:
-            embed = discord.Embed(
-                title="❌ Erro",
-                description="Não foi possível criar o reembolso",
-                color=discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send("❌ Não foi possível notificar nenhum aprovador. Verifique se os IDs estão corretos.", ephemeral=True)
     
     @app_commands.command(name="listar-reembolsos", description="Lista todos os reembolsos (apenas dono)")
     async def list_refunds_cmd(self, interaction: discord.Interaction):

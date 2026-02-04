@@ -479,8 +479,8 @@ def create_refund(
     reason: str,
     payment_id: str = None,
     misticpay_ref: str = None
-) -> bool:
-    """Cria um reembolso."""
+):
+    """Cria um reembolso e retorna o ID do reembolso criado."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
@@ -489,10 +489,16 @@ def create_refund(
             VALUES (?, ?, ?, ?, ?, 'pending')
         """, (payment_id, user_id, amount, reason, misticpay_ref))
         conn.commit()
-        return True
+        
+        # Retornar o ID do reembolso criado
+        refund_id = cursor.lastrowid
+        print(f"[DEBUG] Reembolso criado com ID: {refund_id} para user_id: {user_id}, amount: {amount}")
+        return refund_id
     except Exception as e:
         print(f"Erro ao criar reembolso: {e}")
-        return False
+        import traceback
+        traceback.print_exc()
+        return None
     finally:
         conn.close()
 

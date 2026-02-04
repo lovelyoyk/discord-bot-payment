@@ -918,10 +918,10 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
             chave_pix = self.chave_pix_input.value.strip()
             
             # Criar reembolso
-            from database import create_refund, get_pending_refunds
+            from database import create_refund
             import os
             
-            success = create_refund(
+            refund_id = create_refund(
                 user_id=self.vendedor_id,
                 amount=self.valor_liquido,
                 reason=f"Rembolso de PIX: {chave_pix} (Pagamento: {self.payment_id})",
@@ -929,17 +929,9 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
                 misticpay_ref=None
             )
             
-            if not success:
+            if not refund_id:
                 await interaction.response.send_message("❌ Erro ao criar reembolso no banco de dados.", ephemeral=True)
                 return
-            
-            # Pegar o ID do reembolso criado
-            refunds = get_pending_refunds()
-            if not refunds:
-                await interaction.response.send_message("❌ Erro ao recuperar ID do reembolso", ephemeral=True)
-                return
-            
-            refund_id = refunds[0][0]
             
             # Notificar vendedor
             embed_vendedor = discord.Embed(
