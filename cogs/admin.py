@@ -367,13 +367,14 @@ class AdminCog(commands.Cog):
         - Total descontado: R$ 22,00
         
         O reembolso será enviado para aprovadores autorizados no privado.
-        Dono e financeiros podem usar.
+        Qualquer pessoa com um cargo pode usar este comando.
         """
         
-        if not is_owner(interaction.user.id) and not is_financeiro(interaction.user.id):
+        # Permite qualquer pessoa que tenha um cargo no servidor
+        if not interaction.user.roles or len(interaction.user.roles) <= 1:  # 1 = @everyone
             embed = discord.Embed(
                 title="❌ Acesso Negado",
-                description="Apenas o dono e financeiros podem usar este comando",
+                description="Você precisa ter um cargo no servidor para usar este comando",
                 color=discord.Color.red()
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
