@@ -31,8 +31,8 @@ EMOJI_VENDEDOR = os.getenv("EMOJI_VENDEDOR", "👤")
 EMOJI_VALOR = os.getenv("EMOJI_VALOR", "💰")
 EMOJI_PAGAMENTO = os.getenv("EMOJI_PAGAMENTO", "💳")
 
-# Taxa de reembolso (padrão 8%)
-TAXA_REEMBOLSO = float(os.getenv("TAXA_REEMBOLSO", "0.08"))
+# Taxa de reembolso (padrão 1 real fixo)
+TAXA_REEMBOLSO_FIXA = float(os.getenv("TAXA_REEMBOLSO", "1.00"))
 
 # Referência global para o bot (será setada pelo main.py)
 bot_instance = None
@@ -166,7 +166,7 @@ async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, 
                         payment_id=payment_id,
                         amount=gross_amount,
                         vendedor_id=receiver_id,
-                        taxa_percentual=TAXA_REEMBOLSO
+                        taxa_fixa=TAXA_REEMBOLSO_FIXA
                     )
                     
                     await channel.send(embed=embed, view=view)

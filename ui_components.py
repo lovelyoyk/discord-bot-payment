@@ -756,12 +756,12 @@ class AprovacaoSaqueView(discord.ui.View):
 
 class ReebolsarPagamentoView(discord.ui.View):
     """View com botão de rembolso automático para pagamentos"""
-    def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_percentual: float = 0.08, timeout: int = 3600):
+    def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_fixa: float = 1.00, timeout: int = 3600):
         super().__init__(timeout=timeout)
         self.payment_id = payment_id
         self.amount = amount
         self.vendedor_id = vendedor_id
-        self.taxa_percentual = taxa_percentual
+        self.taxa_fixa = taxa_fixa
     
     @discord.ui.button(label="Rembolsar", style=discord.ButtonStyle.danger, emoji="💸")
     async def rembolsar(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -777,11 +777,14 @@ class ReebolsarPagamentoView(discord.ui.View):
             return
         
         try:
-            # Calcular valor com taxa
+            # Calcular valor com taxa fixa de rembolso
             valor_bruto = float(self.amount)
-            taxa = valor_bruto * self.taxa_percentual
-            valor_liquido = valor_bruto - taxa
-            valor_saque = valor_liquido - taxa  # Saque é o líquido menos a taxa novamente
+            taxa_rembolso = self.taxa_fixa  # Taxa fixa de R$ 1,00
+            valor_liquido = valor_bruto - taxa_rembolso
+            
+            # Taxa de saque (R$ 5,00) é descontada quando o usuário sacar
+            taxa_saque = 5.00
+            valor_apos_saque = valor_liquido - taxa_saque
             
             # Criar reembolso automático
             from database import create_refund, get_user
@@ -799,7 +802,7 @@ class ReebolsarPagamentoView(discord.ui.View):
                 refund_id=refund_id,
                 user_id=self.vendedor_id,
                 amount=valor_liquido,
-                tax_amount=taxa,
+                tax_amount=taxa_rembolso,
                 reason=f"Rembolso automático do pagamento {self.payment_id}",
                 approved=True,
                 approved_by=interaction.user.id
@@ -812,9 +815,10 @@ class ReebolsarPagamentoView(discord.ui.View):
                 color=discord.Color.green()
             )
             embed.add_field(name="💰 Valor Bruto", value=f"R$ {valor_bruto:.2f}", inline=True)
-            embed.add_field(name="📊 Taxa Descontada", value=f"R$ {taxa:.2f}", inline=True)
-            embed.add_field(name="💵 Valor Líquido", value=f"R$ {valor_liquido:.2f}", inline=True)
-            embed.add_field(name="🏦 Valor Saque", value=f"R$ {valor_saque:.2f}", inline=True)
+            embed.add_field(name="📊 Taxa Rembolso", value=f"-R$ {taxa_rembolso:.2f}", inline=True)
+            embed.add_field(name="💵 Saldo Reembolso", value=f"R$ {valor_liquido:.2f}", inline=True)
+            embed.add_field(name="💳 Taxa Saque", value=f"-R$ {taxa_saque:.2f}", inline=True)
+            embed.add_field(name="🏦 Você Receberá", value=f"**R$ {valor_apos_saque:.2f}**", inline=True)
             embed.set_footer(text=f"ID: {refund_id}")
             
             vendedor_user = await interaction.client.fetch_user(self.vendedor_id)
