@@ -829,6 +829,88 @@ class AdminCog(commands.Cog):
             # Reverter as mudanças em memória
             tax_config["taxa_recebimento"] = taxa_rec_antes
             tax_config["taxa_saque"] = taxa_saque_antes
+    
+    @app_commands.command(name="saldo-geral", description="Ver saldo de todos os usuários (dono apenas)")
+    async def saldo_geral(self, interaction: discord.Interaction):
+        """Exibe o saldo total e de cada usuário."""
+        
+        if not is_owner(interaction.user.id):
+            embed = discord.Embed(
+                title="❌ Acesso Negado",
+                description="Apenas o dono pode usar este comando",
+                color=discord.Color.red()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        await interaction.response.defer(ephemeral=True)
+        
+        usuarios = get_all_users_with_balance()
+        total = get_total_balance()
+        
+        if not usuarios:
+            embed = discord.Embed(
+                title="💰 Saldo Geral",
+                description="Nenhum usuário com saldo",
+                color=discord.Color.greyple()
+            )
+            embed.add_field(
+                name="💸 Total",
+                value=f"R$ 0.00",
+                inline=False
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+        
+        embed = discord.Embed(
+            title="💰 Saldo Geral do Sistema",
+            description=f"📊 Total de usuários com saldo: {len(usuarios)}",
+            color=discord.Color.gold(),
+            timestamp=interaction.created_at
+        )
+        
+        # Adicionar cada usuário
+        usuarios_text = ""
+        for idx, (user_id, balance) in enumerate(usuarios, 1):
+            try:
+                user = await self.bot.fetch_user(user_id)
+                nome = user.name
+            except:
+                nome = f"Usuário {user_id}"
+            
+            usuarios_text += f"`{idx:2}` → **{nome}** | R$ {balance:>10.2f}\n"
+        
+        # Se for muito grande, dividir em chunks
+        if len(usuarios_text) > 1024:
+            # Pegar os primeiros 10 e resumo do resto
+            primeiros = "\n".join(usuarios_text.split("\n")[:10])
+            resto_count = len(usuarios) - 10
+            usuarios_text = f"{primeiros}\n\n*... e mais {resto_count} usuário(s)*"
+        
+        embed.add_field(
+            name="👥 Usuários",
+            value=usuarios_text or "Nenhum",
+            inline=False
+        )
+        
+        # Total
+        embed.add_field(
+            name="💸 Saldo Total",
+            value=f"**R$ {total:,.2f}**",
+            inline=False
+        )
+        
+        # Estatísticas
+        saldo_medio = total / len(usuarios) if usuarios else 0
+        embed.add_field(
+            name="📈 Estatísticas",
+            value=f"**Média por usuário:** R$ {saldo_medio:,.2f}\n**Maior saldo:** R$ {usuarios[0][1]:,.2f}\n**Menor saldo:** R$ {usuarios[-1][1]:,.2f}",
+            inline=False
+        )
+        
+        embed.set_footer(text="Acesso exclusivo ao dono")
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 async def setup(bot):
     """Função requerida pelo discord.py 2.0+ para carregar a cog."""

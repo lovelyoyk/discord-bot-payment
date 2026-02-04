@@ -9,9 +9,8 @@ from database import (
     get_balance, get_total_balance, add_balance, 
     remove_balance, withdraw_balance, get_transaction_history, 
     add_user, set_pix_key, get_pix_key, get_balance_by_user,
-    register_payment, has_cargo_permission, get_all_users_with_balance
+    register_payment, has_cargo_permission
 )
-from config import is_owner
 from payment_handler import MisticPayHandler
 from ui_components import PagamentoView
 from validador_pix import ValidadorPIX
@@ -210,9 +209,9 @@ class PaymentCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
-    @app_commands.command(name="saldo", description="Mostra seu saldo pessoal (ou todos se for dono)")
+    @app_commands.command(name="saldo", description="Mostra seu saldo pessoal")
     async def get_personal_balance(self, interaction: discord.Interaction):
-        """Mostra seu saldo pessoal ou de todos os usuários (apenas dono vê todos).
+        """Mostra seu saldo pessoal.
         
         Resposta é visual (apenas você vê).
         """
@@ -221,79 +220,6 @@ class PaymentCog(commands.Cog):
         
         from embed_utils import criar_separador, formatar_valor
         
-        # Se for dono, mostrar saldo geral + lista de usuários
-        if is_owner(interaction.user.id):
-            await interaction.response.defer(ephemeral=True)
-            
-            usuarios = get_all_users_with_balance()
-            total = get_total_balance()
-            
-            embed = discord.Embed(
-                title="💰 Saldo Geral do Sistema",
-                description=f"📊 Total de usuários com saldo: {len(usuarios)}",
-                color=discord.Color.gold(),
-                timestamp=interaction.created_at
-            )
-            
-            # Mostrar seu saldo próprio em destaque
-            embed.add_field(
-                name="👤 Seu Saldo",
-                value=f"**R$ {balance:,.2f}**",
-                inline=False
-            )
-            
-            # Adicionar usuários com saldo
-            if usuarios:
-                usuarios_text = ""
-                for idx, (user_id, user_balance) in enumerate(usuarios, 1):
-                    try:
-                        user = await self.bot.fetch_user(user_id)
-                        nome = user.name
-                    except:
-                        nome = f"Usuário {user_id}"
-                    
-                    usuarios_text += f"`{idx:2}` → **{nome}** | R$ {user_balance:>10.2f}\n"
-                
-                # Se for muito grande, dividir em chunks
-                if len(usuarios_text) > 1024:
-                    # Pegar os primeiros 10 e resumo do resto
-                    primeiros = "\n".join(usuarios_text.split("\n")[:10])
-                    resto_count = len(usuarios) - 10
-                    usuarios_text = f"{primeiros}\n\n*... e mais {resto_count} usuário(s)*"
-                
-                embed.add_field(
-                    name="👥 Usuários com Saldo",
-                    value=usuarios_text,
-                    inline=False
-                )
-                
-                # Total
-                embed.add_field(
-                    name="💸 Saldo Total do Sistema",
-                    value=f"**R$ {total:,.2f}**",
-                    inline=False
-                )
-                
-                # Estatísticas
-                saldo_medio = total / len(usuarios) if usuarios else 0
-                embed.add_field(
-                    name="📈 Estatísticas",
-                    value=f"**Média:** R$ {saldo_medio:,.2f}\n**Máximo:** R$ {usuarios[0][1]:,.2f}\n**Mínimo:** R$ {usuarios[-1][1]:,.2f}",
-                    inline=False
-                )
-            else:
-                embed.add_field(
-                    name="👥 Usuários com Saldo",
-                    value="Nenhum usuário com saldo",
-                    inline=False
-                )
-            
-            embed.set_footer(text="Acesso exclusivo ao dono")
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            return
-        
-        # Para usuários normais, mostrar apenas seu saldo
         embed = discord.Embed(
             title="💰 Seu Saldo",
             description=f"{criar_separador('SALDO DISPONÍVEL')}\n{formatar_valor(balance)}",
