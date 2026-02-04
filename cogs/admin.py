@@ -487,8 +487,18 @@ class AdminCog(commands.Cog):
             for aprovador_id in APROVADORES_REEMBOLSO:
                 try:
                     aprovador = await self.bot.fetch_user(aprovador_id)
-                    await aprovador.send(embed=embed_solicitacao, view=view)
+                    msg = await aprovador.send(embed=embed_solicitacao, view=view)
                     aprovadores_notificados.append(aprovador.name)
+                    
+                    # Registrar message_id para poder deletar depois
+                    from ui_components import AprovacaoReembolsoView
+                    if refund_id not in AprovacaoReembolsoView._refund_messages:
+                        AprovacaoReembolsoView._refund_messages[refund_id] = []
+                    AprovacaoReembolsoView._refund_messages[refund_id].append({
+                        'user_id': aprovador_id,
+                        'message_id': msg.id,
+                        'channel_id': msg.channel.id
+                    })
                 except Exception as e:
                     print(f"Erro ao enviar DM para aprovador {aprovador_id}: {e}")
             

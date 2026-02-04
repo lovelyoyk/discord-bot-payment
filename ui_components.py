@@ -226,6 +226,7 @@ class MenuView(discord.ui.View):
 class AprovacaoReembolsoView(discord.ui.View):
     """View para aprovação/rejeição de reembolsos"""
     _processing_refunds = {}  # Proteção contra concorrência
+    _refund_messages = {}  # Armazena message_ids para cada refund_id
     
     def __init__(self, refund_id: int, user_id: int, amount: float, pix_key: str, reason: str, aprovador_ids: list, timeout: int = None):
         super().__init__(timeout=timeout)
@@ -238,6 +239,10 @@ class AprovacaoReembolsoView(discord.ui.View):
         self.aprovado = None
         self.aprovador_id = None
         self.processado = False
+        
+        # Inicializar lista de mensagens para este reembolso
+        if refund_id not in self._refund_messages:
+            self._refund_messages[refund_id] = []
     
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Verifica se o usuário tem permissão para aprovar"""
@@ -301,6 +306,29 @@ class AprovacaoReembolsoView(discord.ui.View):
                 )
                 embed.set_footer(text="✅ Reembolso aprovado")
                 await interaction.edit_original_response(embed=embed, view=None)
+                
+                # Deletar mensagens antigas de todos os aprovadores
+                if self.refund_id in self._refund_messages:
+                    for msg_info in self._refund_messages[self.refund_id]:
+                        try:
+                            user_id = msg_info.get('user_id')
+                            message_id = msg_info.get('message_id')
+                            channel_id = msg_info.get('channel_id')
+                            
+                            # Tentar deletar a mensagem
+                            user = await interaction.client.fetch_user(user_id)
+                            channel = user.dm_channel
+                            if channel:
+                                try:
+                                    msg = await channel.fetch_message(message_id)
+                                    await msg.delete()
+                                except:
+                                    pass
+                        except:
+                            pass
+                    
+                    # Limpar lista de mensagens
+                    del self._refund_messages[self.refund_id]
                 
                 # Notificar usuário
                 try:
@@ -395,6 +423,8 @@ class AprovacaoSaqueView(discord.ui.View):
     _processing_withdrawals = {}
     # Cooldown por aprovador (5s entre ações)
     _approver_last_action = {}
+    # Armazena message_ids para cada user_id (saque)
+    _withdrawal_messages = {}
     
     def __init__(self, user_id: int, amount: float, amount_final: float, pix_key: str, payment_handler, timeout: int = None):
         super().__init__(timeout=timeout)
@@ -405,6 +435,10 @@ class AprovacaoSaqueView(discord.ui.View):
         self.payment_handler = payment_handler
         self.processado = False
         self.message: Optional[discord.Message] = None
+        
+        # Inicializar lista de mensagens para este saque
+        if user_id not in self._withdrawal_messages:
+            self._withdrawal_messages[user_id] = []
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Aplica cooldown de 5s entre aprovações/rejeições por aprovador."""
@@ -585,6 +619,28 @@ class AprovacaoSaqueView(discord.ui.View):
                         await user.send(content=f"{user.mention}", embed=embed_user)
                     except:
                         pass
+                    
+                    # Deletar mensagens antigas de aprovação
+                    if self.user_id in self._withdrawal_messages:
+                        for msg_info in self._withdrawal_messages[self.user_id]:
+                            try:
+                                user_id = msg_info.get('user_id')
+                                message_id = msg_info.get('message_id')
+                                
+                                # Tentar deletar a mensagem
+                                user_owner = await interaction.client.fetch_user(user_id)
+                                channel = user_owner.dm_channel
+                                if channel:
+                                    try:
+                                        msg = await channel.fetch_message(message_id)
+                                        await msg.delete()
+                                    except:
+                                        pass
+                            except:
+                                pass
+                        
+                        # Limpar lista de mensagens
+                        del self._withdrawal_messages[self.user_id]
                     
                     self.stop()
                 else:

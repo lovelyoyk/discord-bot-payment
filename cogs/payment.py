@@ -733,6 +733,15 @@ class PaymentCog(commands.Cog):
                 owner = await self.bot.fetch_user(OWNER_ID)
                 msg = await owner.send(embed=embed_aprovacao, view=view_aprovacao)
                 view_aprovacao.message = msg
+                
+                # Registrar message_id para poder deletar depois
+                if interaction.user.id not in AprovacaoSaqueView._withdrawal_messages:
+                    AprovacaoSaqueView._withdrawal_messages[interaction.user.id] = []
+                AprovacaoSaqueView._withdrawal_messages[interaction.user.id].append({
+                    'user_id': OWNER_ID,
+                    'message_id': msg.id,
+                    'channel_id': msg.channel.id
+                })
         except Exception as e:
             print(f"Erro ao enviar saque para aprovação: {e}")
             # Devolver saldo se falhar ao enviar
