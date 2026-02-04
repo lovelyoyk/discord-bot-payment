@@ -89,6 +89,9 @@ class PagamentoViewClienteOnly(discord.ui.View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
         
+        # Enviar código PIX separadamente em mensagem de texto puro para facilitar cópia (ephemeral - apenas cliente vê)
+        await interaction.followup.send(f"{self.pix_code}", ephemeral=True)
+        
         # Notificar publicamente que o pagamento está em andamento
         try:
             embed_aguardando = discord.Embed(
@@ -104,14 +107,8 @@ class PagamentoViewClienteOnly(discord.ui.View):
             )
             embed_aguardando.set_footer(text="Será confirmado automaticamente após o pagamento")
             await interaction.channel.send(embed=embed_aguardando)
-            
-            # Enviar código PIX no canal também
-            await interaction.channel.send(f"**Código PIX para {interaction.user.mention}:**\n```\n{self.pix_code}\n```")
         except Exception as e:
             print(f"[AVISO] Erro ao enviar notificação pública: {e}")
-        
-        # Enviar código PIX separadamente em mensagem de texto puro para facilitar cópia (privado)
-        await interaction.followup.send(f"{self.pix_code}", ephemeral=True)
         
         # Enviar QR Code se disponível
         if self.qr_code_base64:
