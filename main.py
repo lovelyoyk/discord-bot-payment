@@ -87,6 +87,15 @@ async def on_ready():
                     synced_guild = await asyncio.wait_for(bot.tree.sync(guild=guild), timeout=30.0)
                     logger.info(f"✅ {len(synced_guild)} comandos sincronizados (GUILD_ID={guild_id})")
                     print(f"✅ {len(synced_guild)} comandos sincronizados no servidor {guild_id}")
+                    # Log detalhado de cada comando
+                    command_names = [cmd.name for cmd in synced_guild]
+                    logger.info(f"Comandos sincronizados: {', '.join(sorted(command_names))}")
+                    # Verifica duplicatas
+                    if len(command_names) != len(set(command_names)):
+                        logger.warning("⚠️ POSSÍVEL DUPLICAÇÃO DETECTADA NO SYNC!")
+                        from collections import Counter
+                        duplicates = [name for name, count in Counter(command_names).items() if count > 1]
+                        logger.warning(f"Comandos duplicados: {duplicates}")
                 except asyncio.TimeoutError:
                     logger.warning("⚠️ Timeout na sincronização de comandos (guild)")
                     print("⚠️  Sincronização de comandos no servidor demorou muito...")
