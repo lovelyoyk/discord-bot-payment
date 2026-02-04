@@ -40,7 +40,7 @@ class ModalConfirmarSaqueTudo(discord.ui.Modal, title="💸 Confirmar Saque de T
             await interaction.response.send_message(f"❌ Erro ao processar: {str(e)}", ephemeral=True)
 
 
-class ModalEscolherValorSaque(discord.ui.Modal, title="💰 Escolher Valor de Saque"):
+class ModalEscolherValorSaque(discord.ui.Modal, title="💰 Escolher Valor"):
     """Modal para escolher o valor a sacar"""
     
     def __init__(self, user_id: int, balance: float):
