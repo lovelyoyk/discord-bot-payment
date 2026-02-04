@@ -94,7 +94,7 @@ def misticpay_webhook():
             safe_add_balance(
                 receiver_id, 
                 amount, 
-                f"Pagamento recebido - MisticPay {payment_id}"
+                f"Pagamento recebido - PIX"
             )
             
             # Adicionar ao histórico detalhado
@@ -133,6 +133,10 @@ def misticpay_webhook():
 async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, ref: str, gross_amount: float):
     """Notifica o pagamento no canal e envia DM ao usuário"""
     try:
+        # Buscar usuário que recebeu o pagamento
+        user = await bot_instance.fetch_user(receiver_id)
+        user_mention = f"<@{receiver_id}>"
+        
         # Buscar canal onde foi criada a cobrança
         channel_id = get_payment_channel(payment_id)
         
@@ -141,11 +145,9 @@ async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, 
             try:
                 channel = bot_instance.get_channel(channel_id)
                 if channel:
-                    user = await bot_instance.fetch_user(receiver_id)
-                    
                     # Criar embed com nova notificação
                     embed = criar_embed_notificacao_pagamento(
-                        cliente="Cliente",  # TODO: Buscar nome do cliente
+                        cliente=user_mention,  # Usar mention do usuário que recebeu
                         vendedor=user.name,
                         valor=amount,
                         valor_bruto=gross_amount,
@@ -158,8 +160,6 @@ async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, 
                 print(f"Erro ao enviar notificação no canal: {e}")
         
         # Também enviar DM para o usuário
-        user = await bot_instance.fetch_user(receiver_id)
-        
         embed = discord.Embed(
             title="✅ Pagamento Recebido",
             color=discord.Color.green()
@@ -182,7 +182,6 @@ async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, 
             value=f"`{ref}`",
             inline=False
         )
-        
         await user.send(embed=embed)
     
     except Exception as e:
