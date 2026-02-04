@@ -100,16 +100,10 @@ async def on_ready():
                     logger.warning("⚠️ Timeout na sincronização de comandos (guild)")
                     print("⚠️  Sincronização de comandos no servidor demorou muito...")
 
-            # Sincronização global (pode demorar até 1 hora para aparecer)
-            try:
-                synced = await asyncio.wait_for(bot.tree.sync(), timeout=30.0)
-                logger.info(f"✅ {len(synced)} comandos sincronizados (global)")
-                print(f"✅ {len(synced)} slash commands sincronizados globalmente!")
-                for cmd in synced:
-                    print(f"   - /{cmd.name}")
-            except asyncio.TimeoutError:
-                logger.warning("⚠️ Timeout na sincronização de comandos (global)")
-                print("⚠️  Sincronização global demorou muito, continuando...")
+            # ⚠️ DESABILITADO: Sincronização global desativada para evitar duplicatas
+            # Os comandos só existem no GUILD para evitar duplicação entre global + guild
+            # logger.info("ℹ️  Sincronização global desativada (usando apenas GUILD)")
+            print("ℹ️  Comandos configurados apenas para o GUILD (sem sincronização global)")
         except Exception as e:
             logger.error(f"Erro ao sincronizar comandos: {e}")
             print(f"❌ Erro ao sincronizar commands: {e}")
