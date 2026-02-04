@@ -57,6 +57,8 @@ def misticpay_webhook():
         event_type = data.get('event', 'unknown') if data else 'unknown'
         if logger:
             logger.info(f"🔔 [WEBHOOK] Evento recebido: {event_type}")
+            logger.info(f"📨 [WEBHOOK] Payload completo: {data}")
+            logger.info(f"📋 [WEBHOOK] Data field: {data.get('data', {}) if data else 'Nenhum'}")
         
         print(f"\n{'='*80}")
         print(f"[Webhook Server] ⏰ {__import__('datetime').datetime.now().isoformat()}")
