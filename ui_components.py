@@ -98,7 +98,7 @@ class SaldoActionView(discord.ui.View):
         self.user_id = user_id
         self.balance = balance
         
-        # Só adiciona botões se for vendedor e tiver saldo
+        # Só adiciona botão de saque se for vendedor e tiver saldo
         if is_vendedor and balance > 0:
             self.add_item(discord.ui.Button(
                 label="💸 Sacar",
@@ -131,10 +131,22 @@ class SaldoActionView(discord.ui.View):
         custom_id = interaction.data.get("custom_id", "")
         
         if custom_id == "sacar":
-            await interaction.response.send_message(
-                f"💸 Use o comando `/sacar {self.balance:.2f}` para sacar seu saldo.",
-                ephemeral=True
+            embed_info = discord.Embed(
+                title="💸 Como Sacar",
+                description="Use o comando `/sacar` para solicitar um saque",
+                color=discord.Color.green()
             )
+            embed_info.add_field(
+                name="📝 Opções de Saque",
+                value=f"**`/sacar 10.50`** → Saca R$ 10.50\n**`/sacar`** → Saca TODO o saldo (R$ {self.balance:.2f})",
+                inline=False
+            )
+            embed_info.add_field(
+                name="⚠️ Importante",
+                value="• Taxa de saque será descontada\n• Precisa de aprovação\n• Chave PIX deve estar configurada",
+                inline=False
+            )
+            await interaction.response.send_message(embed=embed_info, ephemeral=True)
         elif custom_id == "historico":
             await interaction.response.send_message(
                 "📜 Use o comando `/historico` para ver suas transações.",

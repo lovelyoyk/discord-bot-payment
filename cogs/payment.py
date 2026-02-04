@@ -771,6 +771,7 @@ class PaymentCog(commands.Cog):
                 msg = await owner.send(embed=embed_aprovacao, view=view_aprovacao)
                 view_aprovacao.message = msg
                 aprovadores_notificados.append(owner.name)
+                print(f"[SAQUE] Enviado para DONO: {owner.name} ({OWNER_ID})")
                 
                 # Registrar message_id para poder deletar depois
                 if interaction.user.id not in AprovacaoSaqueView._withdrawal_messages:
@@ -780,14 +781,18 @@ class PaymentCog(commands.Cog):
                     'message_id': msg.id,
                     'channel_id': msg.channel.id
                 })
+            else:
+                print(f"[SAQUE] AVISO: OWNER_ID inválido ({OWNER_ID})")
             
             # Enviar para todos os financeiros
             financeiros = get_all_financeiros()
+            print(f"[SAQUE] Total de financeiros configurados: {len(financeiros)}")
             for financeiro in financeiros:
                 try:
                     financeiro_user = await self.bot.fetch_user(financeiro['user_id'])
                     msg = await financeiro_user.send(embed=embed_aprovacao, view=view_aprovacao)
                     aprovadores_notificados.append(financeiro_user.name)
+                    print(f"[SAQUE] Enviado para FINANCEIRO: {financeiro_user.name} ({financeiro['user_id']})")
                     
                     # Registrar message_id para poder deletar depois
                     if interaction.user.id not in AprovacaoSaqueView._withdrawal_messages:
@@ -798,9 +803,14 @@ class PaymentCog(commands.Cog):
                         'channel_id': msg.channel.id
                     })
                 except Exception as e:
-                    print(f"Erro ao enviar saque para financeiro {financeiro['user_id']}: {e}")
+                    print(f"[SAQUE] ERRO ao enviar para financeiro {financeiro['user_id']}: {e}")
+            
+            if not aprovadores_notificados:
+                print(f"[SAQUE] AVISO: Nenhum aprovador foi notificado!")
         except Exception as e:
-            print(f"Erro ao enviar saque para aprovação: {e}")
+            print(f"[SAQUE] ERRO ao enviar para aprovação: {e}")
+            import traceback
+            traceback.print_exc()
             # Devolver saldo se falhar ao enviar
             from database import add_balance
             add_balance(interaction.user.id, amount)
