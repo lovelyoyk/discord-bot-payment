@@ -90,7 +90,7 @@ class PagamentoViewClienteOnly(discord.ui.View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
         
         # Enviar código PIX separadamente em mensagem de texto puro para facilitar cópia
-        await interaction.followup.send(f"```\n{self.pix_code}\n```", ephemeral=True)
+        await interaction.followup.send(f"{self.pix_code}", ephemeral=True)
         
         # Enviar QR Code se disponível
         if self.qr_code_base64:
