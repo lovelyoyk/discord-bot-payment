@@ -356,27 +356,10 @@ class AprovacaoReembolsoView(discord.ui.View):
                 embed.set_footer(text="✅ Reembolso aprovado")
                 await interaction.edit_original_response(embed=embed, view=None)
                 
-                # Deletar mensagens antigas de todos os aprovadores
+                # Deletar mensagens antigas de todos os aprovadores - REMOVIDO PARA MANTER HISTÓRICO
+                # (Mensagens agora ficam permanentes no privado dos aprovadores)
                 if self.refund_id in self._refund_messages:
-                    for msg_info in self._refund_messages[self.refund_id]:
-                        try:
-                            user_id = msg_info.get('user_id')
-                            message_id = msg_info.get('message_id')
-                            channel_id = msg_info.get('channel_id')
-                            
-                            # Tentar deletar a mensagem
-                            user = await interaction.client.fetch_user(user_id)
-                            channel = user.dm_channel
-                            if channel:
-                                try:
-                                    msg = await channel.fetch_message(message_id)
-                                    await msg.delete()
-                                except:
-                                    pass
-                        except:
-                            pass
-                    
-                    # Limpar lista de mensagens
+                    # Apenas limpar do dicionário de tracking, não deletar as mensagens
                     del self._refund_messages[self.refund_id]
                 
                 # Notificar usuário
@@ -393,23 +376,7 @@ class AprovacaoReembolsoView(discord.ui.View):
                 except:
                     pass
                 
-                # 🆕 NOTIFICAR NO CANAL GERAL
-                try:
-                    if NOTIFICACAO_CHANNEL_ID > 0:
-                        channel = interaction.client.get_channel(NOTIFICACAO_CHANNEL_ID)
-                        if channel:
-                            embed_canal = discord.Embed(
-                                title="✅ Reembolso Aprovado",
-                                description=f"**Usuário:** <@{self.user_id}>\n**ID:** #{self.refund_id}\n**Valor:** R$ {self.amount:.2f}\n**Aprovado por:** {interaction.user.mention}",
-                                color=discord.Color.green(),
-                                timestamp=interaction.created_at
-                            )
-                            embed_canal.set_footer(text="✅ Status: Transferência concluída")
-                            await channel.send(embed=embed_canal)
-                except Exception as e:
-                    print(f"Erro ao notificar canal geral: {e}")
-                
-                # 🆕 NOTIFICAR NO CANAL ONDE O /COBRAR FOI USADO
+                # 🆕 NOTIFICAR NO CANAL ONDE O /COBRAR FOI USADO (sem notificação no canal geral)
                 try:
                     if self.payment_id:
                         from database import get_payment_channel
@@ -492,23 +459,7 @@ class AprovacaoReembolsoView(discord.ui.View):
             except:
                 pass
             
-            # 🆕 NOTIFICAR NO CANAL GERAL
-            try:
-                if NOTIFICACAO_CHANNEL_ID > 0:
-                    channel = interaction.client.get_channel(NOTIFICACAO_CHANNEL_ID)
-                    if channel:
-                        embed_canal = discord.Embed(
-                            title="❌ Reembolso Rejeitado",
-                            description=f"**Usuário:** <@{self.user_id}>\n**ID:** #{self.refund_id}\n**Valor:** R$ {self.amount:.2f}\n**Rejeitado por:** {interaction.user.mention}",
-                            color=discord.Color.red(),
-                            timestamp=interaction.created_at
-                        )
-                        embed_canal.set_footer(text="❌ Status: Solicitação rejeitada")
-                        await channel.send(embed=embed_canal)
-            except Exception as e:
-                print(f"Erro ao notificar canal geral: {e}")
-            
-            # 🆕 NOTIFICAR NO CANAL ONDE O /COBRAR FOI USADO
+            # 🆕 NOTIFICAR NO CANAL ONDE O /COBRAR FOI USADO (sem notificação no canal geral)
             try:
                 if self.payment_id:
                     from database import get_payment_channel
