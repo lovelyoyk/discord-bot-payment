@@ -18,7 +18,11 @@ def load_env():
             for line in f:
                 if "=" in line and not line.startswith("#"):
                     key, value = line.strip().split("=", 1)
-                    env[key] = value.strip('"\'')
+                    # Remover espaços antes e depois do =
+                    key = key.strip()
+                    value = value.strip().strip('"\'')
+                    env[key] = value
+                    print(f"DEBUG: {key}={value[:20]}...")  # Debug
     return env
 
 env = load_env()
