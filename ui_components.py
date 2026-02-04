@@ -753,3 +753,74 @@ class AprovacaoSaqueView(discord.ui.View):
             print(f"Erro ao rejeitar saque: {e}")
             await interaction.response.send_message(f"❌ Erro ao rejeitar saque: {str(e)}", ephemeral=True)
 
+
+class ReebolsarPagamentoView(discord.ui.View):
+    """View com botão de rembolso automático para pagamentos"""
+    def __init__(self, payment_id: str, amount: float, vendedor_id: int, taxa_percentual: float = 0.08, timeout: int = 3600):
+        super().__init__(timeout=timeout)
+        self.payment_id = payment_id
+        self.amount = amount
+        self.vendedor_id = vendedor_id
+        self.taxa_percentual = taxa_percentual
+    
+    @discord.ui.button(label="Rembolsar", style=discord.ButtonStyle.danger, emoji="💸")
+    async def rembolsar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Botão para rembolsar o pagamento com taxa automática"""
+        # Verificar se tem permissão (cargo /cobrar)
+        from database import has_cargo_permission
+        
+        # Verificar se usuário tem permissão de cobrar
+        tem_permissao = any(has_cargo_permission(role.id) for role in interaction.user.roles)
+        
+        if not tem_permissao:
+            await interaction.response.send_message("❌ Você não tem permissão para rembolsar. Use `/add-permissao` para obter acesso.", ephemeral=True)
+            return
+        
+        try:
+            # Calcular valor com taxa
+            valor_bruto = float(self.amount)
+            taxa = valor_bruto * self.taxa_percentual
+            valor_liquido = valor_bruto - taxa
+            valor_saque = valor_liquido - taxa  # Saque é o líquido menos a taxa novamente
+            
+            # Criar reembolso automático
+            from database import create_refund, get_user
+            import uuid
+            
+            refund_id = str(uuid.uuid4())
+            vendedor = get_user(self.vendedor_id)
+            
+            if not vendedor:
+                await interaction.response.send_message("❌ Vendedor não encontrado.", ephemeral=True)
+                return
+            
+            # Criar reembolso
+            create_refund(
+                refund_id=refund_id,
+                user_id=self.vendedor_id,
+                amount=valor_liquido,
+                tax_amount=taxa,
+                reason=f"Rembolso automático do pagamento {self.payment_id}",
+                approved=True,
+                approved_by=interaction.user.id
+            )
+            
+            # Notificar usuário
+            embed = discord.Embed(
+                title="✅ Rembolso Processado",
+                description=f"Seu rembolso foi criado automaticamente!",
+                color=discord.Color.green()
+            )
+            embed.add_field(name="💰 Valor Bruto", value=f"R$ {valor_bruto:.2f}", inline=True)
+            embed.add_field(name="📊 Taxa Descontada", value=f"R$ {taxa:.2f}", inline=True)
+            embed.add_field(name="💵 Valor Líquido", value=f"R$ {valor_liquido:.2f}", inline=True)
+            embed.add_field(name="🏦 Valor Saque", value=f"R$ {valor_saque:.2f}", inline=True)
+            embed.set_footer(text=f"ID: {refund_id}")
+            
+            vendedor_user = await interaction.client.fetch_user(self.vendedor_id)
+            await vendedor_user.send(embed=embed)
+            
+            await interaction.response.send_message("✅ Rembolso processado com sucesso!", ephemeral=True)
+        except Exception as e:
+            print(f"Erro ao processar rembolso: {e}")
+            await interaction.response.send_message(f"❌ Erro ao processar rembolso: {str(e)}", ephemeral=True)

@@ -31,6 +31,9 @@ EMOJI_VENDEDOR = os.getenv("EMOJI_VENDEDOR", "👤")
 EMOJI_VALOR = os.getenv("EMOJI_VALOR", "💰")
 EMOJI_PAGAMENTO = os.getenv("EMOJI_PAGAMENTO", "💳")
 
+# Taxa de reembolso (padrão 8%)
+TAXA_REEMBOLSO = float(os.getenv("TAXA_REEMBOLSO", "0.08"))
+
 # Referência global para o bot (será setada pelo main.py)
 bot_instance = None
 
@@ -145,6 +148,9 @@ async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, 
             try:
                 channel = bot_instance.get_channel(channel_id)
                 if channel:
+                    # Importar a View de rembolso
+                    from ui_components import ReebolsarPagamentoView
+                    
                     # Criar embed com nova notificação
                     embed = criar_embed_notificacao_pagamento(
                         cliente=user_mention,  # Usar mention do usuário que recebeu
@@ -152,10 +158,18 @@ async def notificar_pagamento(receiver_id: int, amount: float, payment_id: str, 
                         valor=amount,
                         valor_bruto=gross_amount,
                         ref=ref,
-                        emoji_sucesso=EMOJI_SUCESSO
+                        emoji_sucesso="✅"  # Usar emoji padrão em vez do configurado que pode estar quebrado
                     )
                     
-                    await channel.send(embed=embed)
+                    # Criar view com botão de rembolso
+                    view = ReebolsarPagamentoView(
+                        payment_id=payment_id,
+                        amount=gross_amount,
+                        vendedor_id=receiver_id,
+                        taxa_percentual=TAXA_REEMBOLSO
+                    )
+                    
+                    await channel.send(embed=embed, view=view)
             except Exception as e:
                 print(f"Erro ao enviar notificação no canal: {e}")
         
