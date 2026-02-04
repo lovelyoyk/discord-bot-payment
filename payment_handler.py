@@ -109,6 +109,8 @@ class MisticPayHandler:
     def verify_webhook(request_body: Dict) -> Optional[Dict]:
         """Verifica e processa webhook de pagamento MisticPay."""
         try:
+            from database import get_payment_receiver, db  # Importar db para debug
+            
             print(f"[Webhook] Dados recebidos: {request_body}")
             
             event_type = request_body.get("event")
@@ -128,13 +130,30 @@ class MisticPayHandler:
                 
                 amount = data_field.get("amount", 0)
                 
+                print(f"[Webhook] Payment ID procurado: {payment_id}")
+                print(f"[Webhook] Valor: {amount}")
+                
                 # MisticPay não envia receiver_id no webhook, precisamos buscar no banco
                 # Vamos usar o payment_id para encontrar o receiver
-                from database import get_payment_receiver
                 receiver_id = get_payment_receiver(payment_id)
                 
                 if not receiver_id:
-                    print(f"[Webhook] ERRO: Receiver não encontrado para payment_id: {payment_id}")
+                    print(f"[Webhook] ⚠️ AVISO: Receiver não encontrado para payment_id: '{payment_id}'")
+                    print(f"[Webhook] Procurando todos os pagamentos no banco para debug...")
+                    
+                    # Debug: listar todos os pagamentos
+                    import sqlite3
+                    from database import DB_PATH
+                    try:
+                        conn = sqlite3.connect(DB_PATH)
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT payment_id, receiver_id, amount FROM payments LIMIT 10")
+                        todos = cursor.fetchall()
+                        print(f"[Webhook] Pagamentos no banco: {todos}")
+                        conn.close()
+                    except Exception as debug_err:
+                        print(f"[Webhook] Erro ao fazer debug: {debug_err}")
+                    
                     return None
                 
                 print(f"[Webhook] ✅ Pagamento confirmado: {payment_id} | R$ {amount} | Receiver: {receiver_id}")
