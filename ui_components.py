@@ -917,6 +917,15 @@ class ModalChavePIX(discord.ui.Modal, title="💸 Chave PIX para Rembolso"):
         try:
             chave_pix = self.chave_pix_input.value.strip()
             
+            # Validar limite de reembolso (R$ 50)
+            LIMITE_REEMBOLSO = 50.0
+            if self.valor_liquido > LIMITE_REEMBOLSO:
+                await interaction.response.send_message(
+                    f"❌ Limite de reembolso excedido!\n\n💰 Valor a receber: R$ {self.valor_liquido:.2f}\n🚫 Limite máximo: R$ {LIMITE_REEMBOLSO:.2f}\n\nContate um administrador para solicitar aumento do limite.",
+                    ephemeral=True
+                )
+                return
+            
             # Criar reembolso
             from database import create_refund
             import os

@@ -89,6 +89,24 @@ class PagamentoViewClienteOnly(discord.ui.View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
         
+        # Notificar publicamente que o pagamento está em andamento
+        try:
+            embed_aguardando = discord.Embed(
+                title="⏳ Aguardando Pagamento",
+                description=f"{interaction.user.mention} iniciou o processo de pagamento via PIX\n\nAguardando confirmação...",
+                color=discord.Color.gold(),
+                timestamp=interaction.created_at
+            )
+            embed_aguardando.add_field(
+                name="⏱️ Tempo Limite",
+                value="29 minutos",
+                inline=False
+            )
+            embed_aguardando.set_footer(text="Será confirmado automaticamente após o pagamento")
+            await interaction.channel.send(embed=embed_aguardando)
+        except Exception as e:
+            print(f"[AVISO] Erro ao enviar notificação pública: {e}")
+        
         # Enviar código PIX separadamente em mensagem de texto puro para facilitar cópia
         await interaction.followup.send(f"{self.pix_code}", ephemeral=True)
         
