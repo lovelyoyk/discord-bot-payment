@@ -22,7 +22,7 @@ def load_env():
     return env
 
 env = load_env()
-TOKEN = env.get("BOT_TOKEN")
+TOKEN = env.get("DISCORD_TOKEN")  # Mudado de BOT_TOKEN
 GUILD_ID = env.get("GUILD_ID")
 BOT_ID = env.get("BOT_ID", "1468341807350808576")  # ID do bot
 
