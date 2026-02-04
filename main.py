@@ -75,17 +75,30 @@ async def on_ready():
             print(f"📍 Iniciando sincronização de comandos...")
             logger.info("Sincronizando comandos...")
             print(f"📍 Total de comandos registrados: {len(bot.tree._get_all_commands())}")
-            
-            # Sincronizar com timeout de 30 segundos
+
+            # Se GUILD_ID estiver definido, sincroniza primeiro no servidor específico (aparece instantaneamente)
+            guild_id = os.getenv("GUILD_ID")
+            if guild_id:
+                guild = discord.Object(id=int(guild_id))
+                bot.tree.copy_global_to(guild=guild)
+                try:
+                    synced_guild = await asyncio.wait_for(bot.tree.sync(guild=guild), timeout=30.0)
+                    logger.info(f"✅ {len(synced_guild)} comandos sincronizados (GUILD_ID={guild_id})")
+                    print(f"✅ {len(synced_guild)} comandos sincronizados no servidor {guild_id}")
+                except asyncio.TimeoutError:
+                    logger.warning("⚠️ Timeout na sincronização de comandos (guild)")
+                    print("⚠️  Sincronização de comandos no servidor demorou muito...")
+
+            # Sincronização global (pode demorar até 1 hora para aparecer)
             try:
                 synced = await asyncio.wait_for(bot.tree.sync(), timeout=30.0)
-                logger.info(f"✅ {len(synced)} comandos sincronizados")
-                print(f"✅ {len(synced)} slash commands sincronizados com sucesso!")
+                logger.info(f"✅ {len(synced)} comandos sincronizados (global)")
+                print(f"✅ {len(synced)} slash commands sincronizados globalmente!")
                 for cmd in synced:
                     print(f"   - /{cmd.name}")
             except asyncio.TimeoutError:
-                logger.warning("⚠️ Timeout na sincronização de comandos")
-                print(f"⚠️  Sincronização demorou muito, continuando sem resultado visível...")
+                logger.warning("⚠️ Timeout na sincronização de comandos (global)")
+                print("⚠️  Sincronização global demorou muito, continuando...")
         except Exception as e:
             logger.error(f"Erro ao sincronizar comandos: {e}")
             print(f"❌ Erro ao sincronizar commands: {e}")
