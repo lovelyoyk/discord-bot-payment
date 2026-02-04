@@ -201,6 +201,15 @@ def get_total_balance() -> float:
     conn.close()
     return result[0] if result[0] else 0
 
+def get_all_users_with_balance() -> list:
+    """Retorna lista de todos os usuários com saldo (ordenado pelo maior saldo)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id, balance FROM users WHERE balance > 0 ORDER BY balance DESC")
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
 def get_balance_by_user(user_id: int) -> dict:
     """Retorna info completa do usuário."""
     conn = sqlite3.connect(DB_PATH)
